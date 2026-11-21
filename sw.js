@@ -1,12 +1,13 @@
-const CACHE_NAME = 'math-commander-v1';
+const CACHE_NAME = 'riazi4-superapp-v2';
 const ASSETS = [
   './',
   './index.html',
+  './mul-div.html',
   './manifest.json',
-  './icon.svg'
+  './icon.png',
+  './version.json'
 ];
 
-// نصب و ذخیره فایل‌ها در حافظه گوشی
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
@@ -14,7 +15,6 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// پاک کردن نسخه‌های قدیمی هنگام آپدیت
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
@@ -28,7 +28,6 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// پاسخ‌دهی هوشمند: اول اینترنت (برای آپدیت)، در صورت قطعی از حافظه آفلاین
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   event.respondWith(
