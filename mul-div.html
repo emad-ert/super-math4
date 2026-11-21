@@ -1,0 +1,3061 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>فرمانده اعداد: کهکشان ضرب و تقسیم</title>
+
+  <!-- فونت فارسی وزیرمتن با فالبک سیستمی -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- کتابخانه تولید QR Code برای کارنامه آزمون رسمی -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+
+  <style>
+    :root {
+      --bg-space: #060a16;
+      --cyan-glow: #00f0ff;
+      --rose-glow: #f43f5e;
+      --amber-glow: #f59e0b;
+      --emerald-glow: #10b981;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    input, textarea {
+      user-select: text;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100dvh;
+      background-color: var(--bg-space);
+      color: #f8fafc;
+      font-family: 'Vazirmatn', Tahoma, 'Segoe UI', sans-serif;
+      overflow-x: hidden;
+      touch-action: manipulation;
+    }
+
+    /* بوم پس‌زمینه کهکشانی */
+    #bg-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* بوم کنفتی جشن پیروزی */
+    #confetti-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 70;
+      pointer-events: none;
+    }
+
+    /* لایه تغییر رنگ صفحه در فاز خشم باس (فاز ۲) */
+    #phase2-tint {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      opacity: 0;
+      background: radial-gradient(circle at 50% 25%, rgba(225, 29, 72, 0.45), rgba(107, 33, 168, 0.54) 68%, rgba(15, 5, 25, 0.75));
+      box-shadow: inset 0 0 65px rgba(244, 63, 94, 0.65);
+      transition: opacity 0.6s ease;
+    }
+    #phase2-tint.active {
+      opacity: 1;
+      animation: phasePulse 1.7s ease-in-out infinite;
+    }
+
+    @keyframes phasePulse {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(1.32); }
+    }
+
+    /* کانتینر اصلی موبایل-محور */
+    .app-shell {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 480px;
+      min-height: 100dvh;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      transition: max-width 0.25s ease;
+    }
+    .app-shell.wide-mode {
+      max-width: 100%;
+    }
+
+    /* پنل شیشه‌ای گیمینگ */
+    .glass-panel {
+      background: rgba(14, 23, 44, 0.8);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(56, 189, 248, 0.24);
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+    }
+
+    .phase2-border {
+      border-color: rgba(244, 63, 94, 0.8) !important;
+      box-shadow: 0 0 28px rgba(244, 63, 94, 0.38), inset 0 0 18px rgba(244, 63, 94, 0.22) !important;
+    }
+
+    /* دکمه‌های لمسی با افکت فشردن */
+    .game-btn {
+      transition: transform 0.08s ease, box-shadow 0.14s ease, filter 0.14s ease;
+      cursor: pointer;
+    }
+    .game-btn:active {
+      transform: translateY(2px) scale(0.97);
+    }
+
+    /* نمایش ۱۰۰٪ استاندارد چپ‌به‌راست (LTR) برای تمام معادلات مطابق کتاب ریاضی ایران */
+    .math-eq {
+      direction: ltr;
+      unicode-bidi: isolate;
+      display: inline-flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .math-chip {
+      direction: ltr;
+      unicode-bidi: isolate;
+      display: inline-flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: 0.25rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* صفحه‌کلید اختصاصی گیمینگ */
+    .num-key {
+      background: linear-gradient(180deg, #1f3054 0%, #111c36 100%);
+      border: 1px solid rgba(56, 189, 248, 0.32);
+      box-shadow: 0 4px 0 #070d1c, 0 0 12px rgba(0, 240, 255, 0.08);
+      border-radius: 14px;
+      height: 50px;
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.06s ease, box-shadow 0.06s ease, background 0.1s ease;
+    }
+    .num-key:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #070d1c;
+      background: linear-gradient(180deg, #0ea5e9 0%, #0284c7 100%);
+    }
+
+    .fire-key {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      border: 1px solid rgba(110, 231, 183, 0.72);
+      box-shadow: 0 4px 0 #064e3b, 0 0 18px rgba(16, 185, 129, 0.4);
+      color: #ffffff;
+      font-size: 1.05rem;
+    }
+    .fire-key:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #064e3b;
+    }
+
+    .del-key {
+      background: linear-gradient(180deg, #451a2e 0%, #270e1b 100%);
+      border: 1px solid rgba(244, 63, 94, 0.5);
+      box-shadow: 0 4px 0 #14060d;
+      color: #fda4af;
+      font-size: 1.25rem;
+    }
+    .del-key:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #14060d;
+    }
+
+    /* صفحه‌کلید رسمی و روشن آزمون */
+    .exam-num-key {
+      background: #ffffff;
+      border: 1.5px solid #cbd5e1;
+      box-shadow: 0 3px 0 #cbd5e1;
+      border-radius: 14px;
+      height: 50px;
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.06s ease, box-shadow 0.06s ease, background 0.1s ease;
+    }
+    .exam-num-key:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #cbd5e1;
+      background: #e0f2fe;
+    }
+    .exam-submit-key {
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      border: 1.5px solid #1e40af;
+      box-shadow: 0 3px 0 #1e3a8a;
+      color: #ffffff;
+      font-size: 1rem;
+    }
+    .exam-del-key {
+      background: #fff1f2;
+      border: 1.5px solid #fecdd3;
+      box-shadow: 0 3px 0 #fda4af;
+      color: #be123c;
+      font-size: 1.2rem;
+    }
+
+    /* انیمیشن‌های گیمینگ */
+    @keyframes floatSlow {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-6px); }
+    }
+    .animate-float {
+      animation: floatSlow 2.6s ease-in-out infinite;
+    }
+
+    @keyframes redStagePulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.35), 0 8px 20px rgba(127, 29, 29, 0.45); }
+      50% { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.25), 0 8px 26px rgba(239, 68, 68, 0.55); }
+    }
+    .stage-active-pulse {
+      animation: redStagePulse 2.1s ease-in-out infinite;
+    }
+
+    @keyframes bossRageAnim {
+      0%, 100% { transform: translateY(0px) scale(1.08) rotate(-2deg); filter: drop-shadow(0 0 18px rgba(244, 63, 94, 0.95)); }
+      50% { transform: translateY(-8px) scale(1.14) rotate(2deg); filter: drop-shadow(0 0 28px rgba(239, 68, 68, 1)); }
+    }
+    .boss-rage {
+      animation: bossRageAnim 0.95s ease-in-out infinite;
+    }
+
+    @keyframes bossHitShake {
+      0% { transform: scale(1) translateX(0); filter: brightness(1); }
+      20% { transform: scale(0.88) translateX(-10px) rotate(-5deg); filter: brightness(2.8) drop-shadow(0 0 22px #ffffff); }
+      45% { transform: scale(0.96) translateX(9px) rotate(5deg); filter: brightness(1.8); }
+      75% { transform: scale(0.98) translateX(-4px); }
+      100% { transform: scale(1) translateX(0); filter: brightness(1); }
+    }
+    .boss-hit {
+      animation: bossHitShake 0.36s ease-out;
+    }
+
+    @keyframes shipRecoil {
+      0% { transform: translateY(0); }
+      35% { transform: translateY(7px) scale(0.94); }
+      100% { transform: translateY(0); }
+    }
+    .ship-recoil {
+      animation: shipRecoil 0.24s ease-out;
+    }
+
+    @keyframes screenShake {
+      0%, 100% { transform: translateX(0); }
+      18% { transform: translateX(-8px); }
+      36% { transform: translateX(8px); }
+      54% { transform: translateX(-6px); }
+      72% { transform: translateX(6px); }
+      90% { transform: translateX(-3px); }
+    }
+    .shake-hit {
+      animation: screenShake 0.34s ease-in-out;
+    }
+
+    @keyframes shieldFlicker {
+      0%, 100% { box-shadow: inset 0 0 0 0 rgba(244, 63, 94, 0); }
+      30% { box-shadow: inset 0 0 46px 10px rgba(244, 63, 94, 0.78); }
+      65% { box-shadow: inset 0 0 22px 4px rgba(244, 63, 94, 0.38); }
+    }
+    .shield-damage {
+      animation: shieldFlicker 0.45s ease-out;
+    }
+
+    @keyframes floatUpFade {
+      0% { opacity: 0; transform: translate(-50%, 10px) scale(0.75); }
+      18% { opacity: 1; transform: translate(-50%, -8px) scale(1.08); }
+      75% { opacity: 1; transform: translate(-50%, -34px) scale(1); }
+      100% { opacity: 0; transform: translate(-50%, -56px) scale(0.92); }
+    }
+    .float-popup {
+      position: absolute;
+      left: 50%;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 30;
+      animation: floatUpFade 1.15s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    @keyframes bannerFlash {
+      0% { opacity: 0; transform: scale(0.85); }
+      14% { opacity: 1; transform: scale(1.04); }
+      84% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(0.95); }
+    }
+    .phase-banner-anim {
+      animation: bannerFlash 2.5s ease-in-out forwards;
+    }
+
+    /* ==================== دوئل دو نفره (حالت روبه‌رو + افقی + چرخش CSS) ==================== */
+    .duel-opt-btn {
+      transition: transform 0.07s ease, background 0.12s ease;
+    }
+    .duel-opt-btn:active:not(:disabled) {
+      transform: scale(0.94);
+    }
+    .duel-locked {
+      opacity: 0.4;
+      filter: grayscale(0.55);
+      pointer-events: none;
+    }
+
+    /* چیدمان پیش‌فرض عمودی (روبه‌رو روی میز): بازیکن ۲ بالا با چرخش ۱۸۰ درجه، نوار انرژی وسط، بازیکن ۱ پایین */
+    #duel-stage-body {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      gap: 0.5rem;
+    }
+    #duel-panel-p2 {
+      order: 1;
+      transform: rotate(180deg);
+    }
+    #duel-center-bar {
+      order: 2;
+    }
+    #duel-panel-p1 {
+      order: 3;
+      transform: none;
+    }
+
+    /* حالت افقی خودکار هنگام چرخاندن گوشی یا در تبلت/لپ‌تاپ افقی */
+    @media (orientation: landscape) and (min-width: 560px) {
+      #duel-stage-body {
+        flex-direction: row;
+        direction: ltr;
+        align-items: stretch;
+      }
+      #duel-panel-p1 {
+        order: 1;
+        transform: none;
+        direction: rtl;
+      }
+      #duel-center-bar {
+        order: 2;
+        width: 112px;
+        flex-direction: column;
+        justify-content: space-between;
+        direction: rtl;
+      }
+      #duel-panel-p2 {
+        order: 3;
+        transform: none;
+        direction: rtl;
+      }
+    }
+
+    /* حالت چرخش اجباری CSS ۹۰ درجه (فالبک زمانی که چرخش خودکار گوشی خاموش است) */
+    #view-duel-play.force-landscape {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      width: 100dvh;
+      height: 100dvw;
+      max-height: none;
+      transform: translate(-50%, -50%) rotate(90deg);
+      z-index: 35;
+      background: #060a16;
+      padding: 0.55rem;
+    }
+    #view-duel-play.force-landscape #duel-stage-body {
+      flex-direction: row;
+      direction: ltr;
+      align-items: stretch;
+    }
+    #view-duel-play.force-landscape #duel-panel-p1 {
+      order: 1;
+      transform: none;
+      direction: rtl;
+    }
+    #view-duel-play.force-landscape #duel-center-bar {
+      order: 2;
+      width: 112px;
+      flex-direction: column;
+      justify-content: space-between;
+      direction: rtl;
+    }
+    #view-duel-play.force-landscape #duel-panel-p2 {
+      order: 3;
+      transform: none;
+      direction: rtl;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- بوم پس‌زمینه کهکشانی -->
+  <canvas id="bg-canvas"></canvas>
+
+  <!-- لایه تغییر رنگ صفحه در فاز خشم باس -->
+  <div id="phase2-tint"></div>
+
+  <!-- بوم کنفتی جشن پیروزی -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <!-- کانتینر اصلی برنامه -->
+  <div id="app" class="app-shell">
+
+    <!-- پیام شناور (جایگزین alert) -->
+    <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-[80] hidden max-w-[92vw] px-4 py-2.5 rounded-2xl bg-slate-900/95 border border-cyan-400/60 text-cyan-100 text-sm font-bold shadow-2xl text-center"></div>
+
+    <!-- =================================================================== -->
+    <!-- 1. صفحه ورود اول (ثبت نام + انتخاب آواتار شروع) -->
+    <!-- =================================================================== -->
+    <section id="view-login" class="hidden flex-1 flex flex-col justify-between p-5">
+      <div class="text-center mt-4">
+        <div id="login-ship-preview" class="w-28 h-28 mx-auto mb-2 animate-float"></div>
+        <span class="inline-block px-3.5 py-1 rounded-full bg-cyan-500/15 border border-cyan-400/35 text-cyan-300 text-xs font-extrabold mb-2">
+          بازی آموزشی ریاضی • پایه چهارم
+        </span>
+        <h1 class="text-2xl font-black text-white leading-tight">
+          فرمانده اعداد
+          <span class="block text-transparent bg-clip-text bg-gradient-to-l from-cyan-300 via-sky-400 to-emerald-300 text-xl mt-1">
+            کهکشان ضرب و تقسیم 🚀
+          </span>
+        </h1>
+        <p class="text-slate-300 text-xs mt-2 leading-relaxed max-w-xs mx-auto">
+          اسمت رو بنویس، آواتار فرماندهی رو انتخاب کن و عملیات نجات کهکشان اعداد رو شروع کن!
+        </p>
+      </div>
+
+      <div class="glass-panel rounded-3xl p-5 my-4 space-y-4">
+        <div>
+          <label for="input-player-name" class="block text-xs font-extrabold text-cyan-300 mb-2">
+            نام و نام خانوادگی فرمانده:
+          </label>
+          <input
+            id="input-player-name"
+            type="text"
+            maxlength="32"
+            placeholder="مثلاً: امیرعلی رضایی"
+            class="w-full px-4 py-3.5 rounded-2xl bg-slate-950/85 border border-slate-700 focus:border-cyan-400 focus:outline-none text-white text-base font-bold placeholder-slate-500"
+          />
+        </div>
+
+        <div>
+          <div class="text-xs font-extrabold text-cyan-300 mb-2">آواتار فرمانده (بقیه با سکه توی فروشگاه باز میشن!):</div>
+          <div id="login-avatar-picker" class="grid grid-cols-5 gap-2"></div>
+        </div>
+
+        <button id="btn-start-profile" class="game-btn w-full py-3.5 rounded-2xl bg-gradient-to-l from-cyan-500 via-sky-500 to-blue-600 text-white font-black text-base shadow-lg shadow-cyan-500/30">
+          ورود به اتاق فرمان ⚡
+        </button>
+      </div>
+
+      <div class="text-center text-[11px] text-slate-400 pb-2">
+        تمام پیشرفت، سکه‌ها و تجهیزاتت روی همین دستگاه ذخیره میشه ✨
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- 2. صفحه اصلی (هدر فشرده + شبکه ۲×۲ مربعی + نوار فروشگاه) -->
+    <!-- =================================================================== -->
+    <section id="view-home" class="hidden flex-1 flex flex-col justify-between p-3.5 gap-3 min-h-[100dvh]">
+
+      <!-- هدر فشرده گیمینگ (آواتار + نام + سطح + نوار XP + سکه + صدا) -->
+      <header class="glass-panel rounded-3xl p-3">
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <div id="top-avatar-slot" class="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-950 border-2 border-cyan-400/70 flex items-center justify-center text-2xl shadow-lg shadow-cyan-500/20 shrink-0"></div>
+
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <h2 id="top-player-name" class="font-black text-sm text-white truncate max-w-[118px]">فرمانده</h2>
+                <span id="top-level-badge" class="px-2 py-0.5 rounded-lg bg-gradient-to-l from-amber-400 to-orange-500 text-slate-950 text-[10px] font-black shadow shrink-0">
+                  سطح ۱
+                </span>
+                <button id="btn-edit-name" title="تغییر نام" class="text-[11px] px-1.5 py-0.5 rounded-md bg-slate-800/90 text-slate-300 hover:text-cyan-300">✏️</button>
+              </div>
+              <div class="mt-1.5 w-36 sm:w-44">
+                <div class="flex justify-between text-[10px] font-bold text-slate-300 mb-0.5">
+                  <span id="top-xp-label">۰ / ۱۰۰ XP</span>
+                </div>
+                <div class="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden border border-slate-700/80">
+                  <div id="top-xp-bar" class="h-full bg-gradient-to-l from-cyan-400 to-emerald-400 transition-all duration-500" style="width: 10%;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-1.5 shrink-0">
+            <div class="px-2.5 py-1.5 rounded-xl bg-amber-500/15 border border-amber-400/45 text-amber-300 text-xs font-black flex items-center gap-1">
+              <span>🪙</span>
+              <span id="top-coins-count">۰</span>
+            </div>
+            <button id="btn-mute-global" class="game-btn w-9 h-9 rounded-xl bg-slate-800/90 border border-slate-700 flex items-center justify-center text-sm" title="قطع/وصل صدا">
+              🔊
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- شبکه ۲×۲ کارت‌های مربعی بزرگ و خوانا (۴ مود اصلی) -->
+      <div class="grid grid-cols-2 gap-3 my-auto">
+
+        <!-- کارت ۱: نبرد داستانی -->
+        <div id="card-mode-story" role="button" tabindex="0" class="game-btn relative aspect-square rounded-3xl p-3.5 bg-gradient-to-br from-cyan-500/25 via-blue-900/55 to-slate-950/90 border-2 border-cyan-400/60 shadow-lg shadow-cyan-500/15 flex flex-col items-center justify-center text-center gap-1.5 overflow-hidden">
+          <button data-help="story" class="btn-help absolute top-2.5 left-2.5 w-7 h-7 rounded-full bg-slate-950/75 border border-cyan-400/50 text-cyan-200 text-xs font-black flex items-center justify-center z-10">❓</button>
+          <div class="text-5xl mb-0.5 animate-float">🚀</div>
+          <div class="font-black text-base text-white leading-tight">نبرد داستانی</div>
+          <div class="text-[11px] font-bold text-cyan-200/90">۱۰ مرحله فضایی</div>
+          <div id="home-story-pill" class="mt-1 px-2.5 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-[10px] font-black text-cyan-200">
+            ۰ از ۱۰ فتح شده
+          </div>
+        </div>
+
+        <!-- کارت ۲: باشگاه تقویت ضرب -->
+        <div id="card-mode-gym" role="button" tabindex="0" class="game-btn relative aspect-square rounded-3xl p-3.5 bg-gradient-to-br from-emerald-500/25 via-teal-900/55 to-slate-950/90 border-2 border-emerald-400/60 shadow-lg shadow-emerald-500/15 flex flex-col items-center justify-center text-center gap-1.5 overflow-hidden">
+          <button data-help="gym" class="btn-help absolute top-2.5 left-2.5 w-7 h-7 rounded-full bg-slate-950/75 border border-emerald-400/50 text-emerald-200 text-xs font-black flex items-center justify-center z-10">❓</button>
+          <div class="text-5xl mb-0.5">💪</div>
+          <div class="font-black text-base text-white leading-tight">باشگاه تقویت ضرب</div>
+          <div class="text-[11px] font-bold text-emerald-200/90">تمرین هوشمند</div>
+          <div id="home-gym-pill" class="mt-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-[10px] font-black text-emerald-200">
+            آماده تمرین
+          </div>
+        </div>
+
+        <!-- کارت ۳: دوئل دو نفره -->
+        <div id="card-mode-duel" role="button" tabindex="0" class="game-btn relative aspect-square rounded-3xl p-3.5 bg-gradient-to-br from-purple-500/25 via-fuchsia-900/55 to-slate-950/90 border-2 border-purple-400/60 shadow-lg shadow-purple-500/15 flex flex-col items-center justify-center text-center gap-1.5 overflow-hidden">
+          <button data-help="duel" class="btn-help absolute top-2.5 left-2.5 w-7 h-7 rounded-full bg-slate-950/75 border border-purple-400/50 text-purple-200 text-xs font-black flex items-center justify-center z-10">❓</button>
+          <div class="text-5xl mb-0.5">⚔️</div>
+          <div class="font-black text-base text-white leading-tight">دوئل دو نفره</div>
+          <div class="text-[11px] font-bold text-purple-200/90">مسابقه با دوستت</div>
+          <div class="mt-1 px-2.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-400/40 text-[10px] font-black text-purple-200">
+            روبه‌رو یا افقی 🔄
+          </div>
+        </div>
+
+        <!-- کارت ۴: آزمون رسمی -->
+        <div id="card-mode-exam" role="button" tabindex="0" class="game-btn relative aspect-square rounded-3xl p-3.5 bg-gradient-to-br from-amber-500/25 via-orange-900/50 to-slate-950/90 border-2 border-amber-400/60 shadow-lg shadow-amber-500/15 flex flex-col items-center justify-center text-center gap-1.5 overflow-hidden">
+          <button data-help="exam" class="btn-help absolute top-2.5 left-2.5 w-7 h-7 rounded-full bg-slate-950/75 border border-amber-400/50 text-amber-200 text-xs font-black flex items-center justify-center z-10">❓</button>
+          <div class="text-5xl mb-0.5">📝</div>
+          <div class="font-black text-base text-white leading-tight">آزمون رسمی</div>
+          <div class="text-[11px] font-bold text-amber-200/90">کارنامه برای معلم</div>
+          <div class="mt-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-[10px] font-black text-amber-200">
+            ۱۵ سوال + QR 📲
+          </div>
+        </div>
+
+      </div>
+
+      <!-- بنر تمام‌عرض فروشگاه تجهیزات زیر شبکه ۲×۲ -->
+      <button id="btn-open-shop" class="game-btn relative w-full rounded-3xl p-3.5 bg-gradient-to-l from-amber-400 via-orange-500 to-amber-500 text-slate-950 shadow-xl shadow-amber-500/25 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3 min-w-0">
+          <div id="home-ship-slot" class="w-12 h-12 rounded-2xl bg-slate-950/20 p-1 shrink-0 animate-float"></div>
+          <div class="text-right min-w-0">
+            <div class="font-black text-base leading-tight">فروشگاه تجهیزات 🚀</div>
+            <div id="home-loadout-label" class="text-[11px] font-extrabold text-slate-900/80 truncate mt-0.5">
+              کاوشگر آبی • آبی پلاسما
+            </div>
+          </div>
+        </div>
+        <div class="flex flex-col items-end gap-1 shrink-0">
+          <div class="px-2.5 py-1 rounded-xl bg-slate-950/85 text-amber-300 text-xs font-black">
+            🪙 <span id="shop-banner-coins">۰</span>
+          </div>
+          <span id="home-shop-affordable" class="hidden px-2 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-black animate-pulse">
+            قابل خرید! ✨
+          </span>
+        </div>
+      </button>
+
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- 3. نقشه ۱۰ مرحله‌ای نبرد داستانی (ساده و تفکیک رنگی سبز/قرمز/سیاه) -->
+    <!-- =================================================================== -->
+    <section id="view-story-map" class="hidden flex-1 flex flex-col p-4 gap-3">
+      <div class="flex items-center justify-between">
+        <button id="btn-back-story-map" class="game-btn px-3 py-2 rounded-xl bg-slate-800/90 border border-slate-700 text-xs font-bold text-slate-200">
+          ➜ اتاق فرمان
+        </button>
+        <h2 class="text-base font-black text-cyan-300">نبرد داستانی 🚀</h2>
+        <button data-help="story" class="btn-help game-btn px-2.5 py-1.5 rounded-xl bg-slate-800/90 border border-slate-700 text-xs font-bold text-cyan-200">❓</button>
+      </div>
+
+      <!-- راهنمای رنگ مراحل -->
+      <div class="flex items-center justify-center gap-2 text-[11px] font-extrabold">
+        <span class="px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/60 text-emerald-300">✅ فتح شده</span>
+        <span class="px-2.5 py-1 rounded-full bg-red-500/25 border border-red-400/70 text-red-200">⚔️ آماده نبرد</span>
+        <span class="px-2.5 py-1 rounded-full bg-slate-900 border border-slate-700 text-slate-400">🔒 قفل</span>
+      </div>
+
+      <div id="story-stages-list" class="flex flex-col gap-2.5 flex-1 overflow-y-auto pb-4"></div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- 4. باشگاه تقویت ضرب (کاملاً بدون باگ - ۳ سطح شفاف) -->
+    <!-- =================================================================== -->
+    <section id="view-gym" class="hidden flex-1 flex flex-col p-4 gap-3.5">
+      <div class="flex items-center justify-between">
+        <button id="btn-back-gym" class="game-btn px-3 py-2 rounded-xl bg-slate-800/90 border border-slate-700 text-xs font-bold text-slate-200">
+          ➜ بازگشت
+        </button>
+        <h2 class="text-base font-black text-emerald-300">باشگاه تقویت ضرب 💪</h2>
+        <button data-help="gym" class="btn-help game-btn px-2.5 py-1.5 rounded-xl bg-slate-800/90 border border-slate-700 text-xs font-bold text-emerald-200">❓</button>
+      </div>
+
+      <!-- ۳ شمارنده واضح سطح تسلط -->
+      <div class="grid grid-cols-3 gap-2 text-center">
+        <div class="rounded-2xl p-3 bg-rose-950/60 border border-rose-500/60">
+          <div class="text-[11px] font-black text-rose-300">🔴 نیاز به تمرین</div>
+          <div id="gym-count-1" class="text-2xl font-black text-white mt-1">۰</div>
+        </div>
+        <div class="rounded-2xl p-3 bg-amber-950/55 border border-amber-400/60">
+          <div class="text-[11px] font-black text-amber-300">🟡 در حال یادگیری</div>
+          <div id="gym-count-2" class="text-2xl font-black text-white mt-1">۰</div>
+        </div>
+        <div class="rounded-2xl p-3 bg-emerald-950/55 border border-emerald-400/60">
+          <div class="text-[11px] font-black text-emerald-300">🟢 مسلط شدم</div>
+          <div id="gym-count-3" class="text-2xl font-black text-white mt-1">۰</div>
+        </div>
+      </div>
+
+      <!-- کارت وضعیت اصلی (یا لیست اشتباهات قرمز یا پیام تبریک + آزمونک هوشمند) -->
+      <div id="gym-main-card" class="glass-panel rounded-3xl p-4 space-y-3"></div>
+
+      <!-- دکمه تمرین سطح زرد (در صورت وجود) -->
+      <button id="btn-gym-yellow" class="hidden game-btn w-full py-3 rounded-2xl bg-amber-500/20 border border-amber-400/60 text-amber-200 font-extrabold text-xs">
+        🟡 مرور موارد در حال یادگیری
+      </button>
+
+      <!-- انتخاب تمرین جدول دلخواه (جمع‌وجور و منظم) -->
+      <div class="glass-panel rounded-2xl p-3.5 mt-auto">
+        <div class="text-xs font-extrabold text-slate-300 mb-2">📚 یا تمرین آزاد یک جدول ضرب دلخواه:</div>
+        <div id="gym-table-picker" class="grid grid-cols-4 gap-2"></div>
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- 5. صحنه گیم‌پلی فضایی (نبرد داستانی / باشگاه تقویت) -->
+    <!-- =================================================================== -->
+    <section id="view-battle" class="hidden flex-1 flex flex-col justify-between p-3 gap-2 h-[100dvh] max-h-[100dvh] overflow-hidden">
+      <!-- هدر HUD -->
+      <div class="glass-panel rounded-2xl px-3 py-2 flex items-center justify-between gap-2 shrink-0">
+        <button id="btn-quit-battle" class="game-btn px-2.5 py-1.5 rounded-xl bg-slate-800 text-xs font-bold text-slate-300">
+          ✕ خروج
+        </button>
+
+        <div class="flex items-center gap-2 min-w-0">
+          <div id="battle-mini-avatar" class="w-8 h-8 rounded-xl bg-slate-900 border border-cyan-400/50 flex items-center justify-center text-base shrink-0"></div>
+          <div class="min-w-0">
+            <div id="battle-title" class="text-xs font-black text-cyan-300 truncate">مرحله ۱</div>
+            <div id="battle-sub" class="text-[10px] font-bold text-slate-400">نبرد فضایی</div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1.5 shrink-0">
+          <span id="battle-combo-pill" class="hidden px-2 py-1 rounded-lg bg-amber-500/20 border border-amber-400/50 text-amber-300 text-[11px] font-black">
+            🔥 ۲x
+          </span>
+          <span class="px-2 py-1 rounded-lg bg-slate-900/90 border border-amber-400/30 text-amber-300 text-[11px] font-black">
+            🪙 <span id="battle-coins-earned">۰</span>
+          </span>
+          <button id="btn-mute-battle" class="game-btn w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-xs">🔊</button>
+        </div>
+      </div>
+
+      <!-- میدان نبرد با بوم لیزر و ذرات -->
+      <div id="battle-arena" class="relative flex-1 min-h-[155px] rounded-3xl glass-panel p-3 flex flex-col justify-between overflow-hidden transition-all duration-500">
+        <canvas id="fx-canvas" class="absolute inset-0 w-full h-full pointer-events-none z-20"></canvas>
+
+        <!-- بنر هشدار فاز خشم باس -->
+        <div id="phase2-banner" class="hidden absolute inset-x-3 top-1/2 -translate-y-1/2 z-30 py-2.5 px-3 rounded-2xl bg-gradient-to-l from-rose-600 via-red-600 to-purple-700 border-2 border-amber-300 text-center shadow-2xl">
+          <div class="text-sm font-black text-white">⚠️ هشدار! فاز خشم باس فعال شد! (سکه ۲ برابر!)</div>
+        </div>
+
+        <div id="battle-popups" class="absolute inset-0 pointer-events-none z-30 overflow-hidden"></div>
+
+        <!-- نوار جان دشمن / پیشرفت تمرین -->
+        <div class="relative z-10">
+          <div class="flex items-center justify-between text-[11px] font-extrabold mb-1">
+            <div class="flex items-center gap-1.5">
+              <span id="boss-name-text" class="text-rose-300">پهپاد نگهبان</span>
+              <span id="phase2-tag" class="hidden px-1.5 py-0.5 rounded bg-rose-600 text-white text-[9px] font-black animate-pulse">فاز خشم! ×۲ 🪙</span>
+            </div>
+            <span id="boss-hp-label" class="text-rose-400">۵۰ / ۵۰</span>
+          </div>
+          <div class="w-full h-2.5 bg-slate-950/90 rounded-full overflow-hidden border border-slate-700/80">
+            <div id="boss-hp-bar" class="h-full bg-gradient-to-l from-rose-500 via-orange-500 to-amber-400 transition-all duration-300" style="width: 100%;"></div>
+          </div>
+        </div>
+
+        <!-- باس دشمن -->
+        <div class="relative z-10 flex items-center justify-center my-auto">
+          <div id="boss-svg-slot" class="w-20 h-20 sm:w-24 sm:h-24 animate-float"></div>
+        </div>
+
+        <!-- ردیف پایین: سپر ۳تایی + سفینه تجهیز شده + راهنمای سرعت -->
+        <div class="relative z-10 flex items-end justify-between">
+          <div id="battle-shields-box" class="text-sm font-bold text-cyan-300 bg-slate-950/65 px-2 py-1 rounded-xl border border-cyan-500/30">
+            <span id="battle-shields-icons">🛡️🛡️🛡️</span>
+          </div>
+          <div id="player-ship-battle-slot" class="w-14 h-14 animate-float"></div>
+          <div class="text-[10px] font-bold text-amber-300 bg-slate-950/70 px-2 py-1 rounded-lg border border-amber-400/30">
+            ⚡ زیر ۵ث = بحرانی
+          </div>
+        </div>
+      </div>
+
+      <!-- کارت سوال (کاملاً چپ‌به‌راست LTR) -->
+      <div id="battle-question-card" class="glass-panel rounded-2xl px-4 py-2.5 text-center shrink-0">
+        <div class="math-eq" dir="ltr">
+          <span id="battle-q-a" class="text-3xl font-black text-white">۷</span>
+          <span id="battle-q-op" class="text-3xl font-black text-amber-300">×</span>
+          <span id="battle-q-b" class="text-3xl font-black text-white">۸</span>
+          <span class="text-2xl font-black text-cyan-400">=</span>
+          <div id="battle-answer-box" class="min-w-[78px] h-11 px-3 rounded-xl bg-slate-950/90 border-2 border-cyan-400/80 flex items-center justify-center text-3xl font-black text-cyan-300">
+            ؟
+          </div>
+        </div>
+        <div id="gym-gentle-reveal" class="hidden mt-2 py-1.5 px-3 rounded-xl bg-amber-500/20 border border-amber-400/50 text-xs font-extrabold text-amber-200"></div>
+      </div>
+
+      <!-- صفحه‌کلید اختصاصی گیمینگ -->
+      <div id="battle-numpad" class="grid grid-cols-3 gap-2 pb-1 shrink-0" dir="ltr">
+        <button class="num-key" data-digit="1">۱</button>
+        <button class="num-key" data-digit="2">۲</button>
+        <button class="num-key" data-digit="3">۳</button>
+        <button class="num-key" data-digit="4">۴</button>
+        <button class="num-key" data-digit="5">۵</button>
+        <button class="num-key" data-digit="6">۶</button>
+        <button class="num-key" data-digit="7">۷</button>
+        <button class="num-key" data-digit="8">۸</button>
+        <button class="num-key" data-digit="9">۹</button>
+        <button class="num-key del-key" id="battle-key-del">⌫</button>
+        <button class="num-key" data-digit="0">۰</button>
+        <button class="num-key fire-key" id="battle-key-fire">⚡ شلیک</button>
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- 6. صفحه پایان مرحله / تمرین -->
+    <!-- =================================================================== -->
+    <section id="view-result" class="hidden flex-1 flex flex-col justify-between p-5 gap-3.5">
+      <div class="text-center mt-2">
+        <div class="flex items-center justify-center gap-3 mb-2">
+          <div id="result-avatar-slot" class="w-14 h-14 rounded-2xl bg-slate-900/90 border-2 border-cyan-400/60 flex items-center justify-center text-3xl"></div>
+          <div id="result-emoji" class="text-5xl animate-float">🏆</div>
+        </div>
+        <div id="result-stars" class="text-2xl tracking-widest mb-1">⭐⭐⭐</div>
+        <h2 id="result-heading" class="text-2xl font-black text-white">پیروزی درخشان!</h2>
+        <p id="result-subtext" class="text-xs text-slate-300 mt-1">آفرین فرمانده!</p>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2.5 text-center">
+        <div class="glass-panel rounded-2xl p-3">
+          <div class="text-[11px] text-slate-400 font-bold">دقت پاسخ</div>
+          <div id="res-acc" class="text-xl font-black text-emerald-400 mt-1">۹۰٪</div>
+        </div>
+        <div class="glass-panel rounded-2xl p-3">
+          <div class="text-[11px] text-slate-400 font-bold">سکه جایزه</div>
+          <div id="res-coins" class="text-xl font-black text-amber-400 mt-1">+۶۰ 🪙</div>
+        </div>
+        <div class="glass-panel rounded-2xl p-3">
+          <div class="text-[11px] text-slate-400 font-bold">تجربه XP</div>
+          <div id="res-xp" class="text-xl font-black text-cyan-400 mt-1">+۸۰</div>
+        </div>
+      </div>
+
+      <!-- بنر ارتقای سطح -->
+      <div id="res-levelup-banner" class="hidden rounded-2xl p-3 bg-gradient-to-l from-amber-500/25 to-orange-500/25 border border-amber-400 text-center">
+        <div class="text-sm font-black text-amber-300">🎉 تبریک! به سطح جدید رسیدی!</div>
+        <div id="res-levelup-text" class="text-xs font-bold text-white mt-0.5">سطح ۲ باز شد!</div>
+      </div>
+
+      <!-- لیست اشتباهات (فقط پاسخ‌های غلط) -->
+      <div id="res-weak-box" class="hidden glass-panel rounded-2xl p-3 border-rose-500/45">
+        <div class="text-xs font-extrabold text-rose-300 mb-2">📌 این اشتباهات رفتن به «باشگاه تقویت ضرب» تا تمرینشون کنی:</div>
+        <div id="res-weak-list" class="flex flex-wrap gap-1.5"></div>
+      </div>
+
+      <div class="space-y-2.5 pb-2 mt-auto">
+        <button id="btn-res-next" class="hidden game-btn w-full py-3.5 rounded-2xl bg-gradient-to-l from-emerald-500 via-teal-500 to-cyan-500 text-white font-black text-base shadow-lg shadow-emerald-500/30">
+          مرحله بعد ➡️
+        </button>
+
+        <button id="btn-res-shop" class="relative game-btn w-full py-3.5 rounded-2xl bg-gradient-to-l from-amber-400 to-orange-500 text-slate-950 font-black text-sm shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2">
+          <span>🛒 فروشگاه</span>
+          <span id="res-shop-affordable" class="hidden px-2 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-black animate-pulse">قابل خرید! ✨</span>
+        </button>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <button id="btn-res-retry" class="game-btn py-3 rounded-2xl bg-slate-800 border border-slate-700 text-white font-bold text-xs">
+            تکرار 🔄
+          </button>
+          <button id="btn-res-map" class="game-btn py-3 rounded-2xl bg-slate-800 border border-cyan-500/40 text-cyan-200 font-bold text-xs">
+            نقشه مراحل 🗺️
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- 7. دوئل دو نفره (تنظیمات + بازی روبه‌رو/افقی + برنده) -->
+    <!-- =================================================================== -->
+    <section id="view-duel-setup" class="hidden flex-1 flex flex-col justify-between p-4 gap-4">
+      <div class="flex items-center justify-between">
+        <button id="btn-back-duel-setup" class="game-btn px-3 py-2 rounded-xl bg-slate-800/90 border border-slate-700 text-xs font-bold text-slate-200">
+          ➜ بازگشت
+        </button>
+        <h2 class="text-base font-black text-purple-300">دوئل دو نفره ⚔️</h2>
+        <button data-help="duel" class="btn-help game-btn px-2.5 py-1.5 rounded-xl bg-slate-800/90 border border-slate-700 text-xs font-bold text-purple-200">❓</button>
+      </div>
+
+      <div class="glass-panel rounded-3xl p-4 space-y-4">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-extrabold text-cyan-300 mb-1.5">بازیکن ۱ (آبی):</label>
+            <input id="duel-p1-name" type="text" value="بازیکن ۱" maxlength="16" class="w-full px-3 py-2.5 rounded-xl bg-slate-950/90 border border-cyan-500/50 text-white font-bold text-sm focus:outline-none focus:border-cyan-400" />
+          </div>
+          <div>
+            <label class="block text-xs font-extrabold text-rose-300 mb-1.5">بازیکن ۲ (قرمز):</label>
+            <input id="duel-p2-name" type="text" value="بازیکن ۲" maxlength="16" class="w-full px-3 py-2.5 rounded-xl bg-slate-950/90 border border-rose-500/50 text-white font-bold text-sm focus:outline-none focus:border-rose-400" />
+          </div>
+        </div>
+
+        <div>
+          <div class="text-xs font-extrabold text-slate-300 mb-2">سطح سختی سوالات:</div>
+          <div class="grid grid-cols-3 gap-2">
+            <button data-diff="easy" class="duel-cfg-diff game-btn py-2.5 rounded-xl border border-slate-700 bg-slate-900 text-xs font-extrabold text-slate-300">آسان 🌱</button>
+            <button data-diff="medium" class="duel-cfg-diff game-btn py-2.5 rounded-xl border-2 border-purple-400 bg-purple-600/30 text-xs font-black text-white">متوسط ⚡</button>
+            <button data-diff="hard" class="duel-cfg-diff game-btn py-2.5 rounded-xl border border-slate-700 bg-slate-900 text-xs font-extrabold text-slate-300">سخت 🔥</button>
+          </div>
+        </div>
+
+        <div class="rounded-2xl bg-slate-950/70 border border-purple-400/30 p-3 text-xs text-slate-300 leading-relaxed">
+          📱 <span class="text-purple-300 font-extrabold">نکته عالی برای موبایل:</span> می‌تونید گوشی رو وسط میز بذارید و <span class="text-cyan-300 font-bold">روبه‌رو</span> بازی کنید، یا گوشی رو <span class="text-amber-300 font-bold">افقی بچرخونید</span> (یا دکمه «🔄 چرخش افقی» رو بزنید) تا کنار هم مسابقه بدید!
+        </div>
+      </div>
+
+      <button id="btn-start-duel" class="game-btn w-full py-4 rounded-2xl bg-gradient-to-l from-purple-600 via-fuchsia-600 to-rose-600 text-white font-black text-base shadow-lg shadow-purple-500/30">
+        شروع دوئل طناب‌کشی ⚔️
+      </button>
+    </section>
+
+    <!-- صفحه بازی دوئل دو نفره -->
+    <section id="view-duel-play" class="hidden flex-1 flex flex-col p-2 gap-2 h-[100dvh] max-h-[100dvh] overflow-hidden">
+      <!-- بدنه دوئل: در عمودی (بالا P2 برعکس، وسط نوار انرژی، پایین P1) و در افقی (چپ P1، وسط نوار انرژی، راست P2) -->
+      <div id="duel-stage-body">
+
+        <!-- پنل بازیکن ۲ (قرمز) -->
+        <div id="duel-panel-p2" class="flex-1 glass-panel rounded-3xl p-2.5 border-2 border-rose-400/60 bg-rose-950/30 flex flex-col justify-between min-h-0">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-xs font-black text-rose-300 truncate"><span id="duel-label-p2">بازیکن ۲</span> (<span id="duel-score-p2">۰</span>)</span>
+            <span id="duel-status-p2" class="text-[11px] font-bold text-rose-200">آماده!</span>
+          </div>
+          <div class="text-center my-auto py-1">
+            <div id="duel-q-p2" class="math-eq text-3xl sm:text-4xl font-black text-white" dir="ltr"></div>
+          </div>
+          <div id="duel-opts-p2" class="grid grid-cols-2 gap-2"></div>
+        </div>
+
+        <!-- نوار میانی کنترل + طناب‌کشی انرژی -->
+        <div id="duel-center-bar" class="glass-panel rounded-2xl p-2 flex items-center justify-between gap-2 shrink-0">
+          <div class="flex items-center gap-1.5">
+            <button id="btn-quit-duel" class="game-btn px-2 py-1.5 rounded-xl bg-slate-800 text-[11px] font-bold text-slate-300">✕</button>
+            <button id="btn-duel-rotate" class="game-btn px-2.5 py-1.5 rounded-xl bg-purple-600/40 border border-purple-400/60 text-[11px] font-black text-purple-100 whitespace-nowrap">
+              🔄 چرخش افقی
+            </button>
+          </div>
+
+          <!-- نوار طناب‌کشی انرژی -->
+          <div class="flex-1 min-w-[90px] w-full flex flex-col items-center gap-1">
+            <div class="text-[10px] font-black text-amber-300" id="duel-round-label">راند ۱ از ۱۰</div>
+            <div class="relative w-full h-4 rounded-full bg-slate-950 border border-slate-700 overflow-hidden flex" dir="ltr">
+              <div id="duel-bar-p1" class="h-full bg-gradient-to-r from-blue-600 to-cyan-400 transition-all duration-300" style="width: 50%;"></div>
+              <div id="duel-bar-p2" class="h-full bg-gradient-to-l from-red-600 to-rose-400 transition-all duration-300 flex-1"></div>
+              <div id="duel-clash-spark" class="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-amber-300 border-2 border-white shadow-[0_0_12px_#fbbf24] transition-all duration-300" style="left: calc(50% - 8px);"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- پنل بازیکن ۱ (آبی) -->
+        <div id="duel-panel-p1" class="flex-1 glass-panel rounded-3xl p-2.5 border-2 border-cyan-400/60 bg-cyan-950/30 flex flex-col justify-between min-h-0">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-xs font-black text-cyan-300 truncate"><span id="duel-label-p1">بازیکن ۱</span> (<span id="duel-score-p1">۰</span>)</span>
+            <span id="duel-status-p1" class="text-[11px] font-bold text-cyan-200">آماده!</span>
+          </div>
+          <div class="text-center my-auto py-1">
+            <div id="duel-q-p1" class="math-eq text-3xl sm:text-4xl font-black text-white" dir="ltr"></div>
+          </div>
+          <div id="duel-opts-p1" class="grid grid-cols-2 gap-2"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- صفحه برنده دوئل -->
+    <section id="view-duel-winner" class="hidden flex-1 flex flex-col justify-center items-center p-5 text-center gap-5">
+      <div class="text-7xl animate-float">👑</div>
+      <div>
+        <div class="text-sm font-extrabold text-amber-300 mb-1">قهرمان دوئل سرعت!</div>
+        <h2 id="duel-winner-name" class="text-3xl font-black text-white">بازیکن ۱ برنده شد!</h2>
+        <p id="duel-final-score" class="text-sm text-slate-300 mt-2">نتیجه نهایی: ۶ در برابر ۴</p>
+      </div>
+      <div class="flex gap-3 w-full max-w-sm">
+        <button id="btn-duel-rematch" class="game-btn flex-1 py-3.5 rounded-2xl bg-gradient-to-l from-purple-600 to-rose-600 text-white font-black text-sm">
+          ⚔️ مسابقه دوباره
+        </button>
+        <button id="btn-duel-home" class="game-btn flex-1 py-3.5 rounded-2xl bg-slate-800 border border-slate-700 text-white font-bold text-sm">
+          🏠 اتاق فرمان
+        </button>
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- 8. آزمون رسمی (تم روشن و رسمی مستقل + کارنامه QR و MG4) -->
+    <!-- =================================================================== -->
+    <section id="view-exam" class="hidden flex-1 flex flex-col justify-between bg-slate-100 text-slate-900 p-4 gap-3 min-h-[100dvh]">
+      <div class="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200 flex items-center justify-between">
+        <button id="btn-quit-exam" class="game-btn px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-300 text-xs font-bold text-slate-700">
+          ✕ انصراف
+        </button>
+        <div class="text-center">
+          <div class="text-sm font-black text-slate-800">آزمون رسمی ضرب و تقسیم</div>
+          <div id="exam-progress-label" class="text-xs font-bold text-blue-600">سوال ۱ از ۱۵</div>
+        </div>
+        <div class="px-2.5 py-1 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 text-xs font-extrabold">
+          ⏱️ <span id="exam-timer">۰۰:۰۰</span>
+        </div>
+      </div>
+
+      <div class="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+        <div id="exam-progress-bar" class="h-full bg-blue-600 transition-all duration-300" style="width: 6%;"></div>
+      </div>
+
+      <div class="bg-white rounded-3xl p-6 shadow-md border border-slate-200 text-center my-auto">
+        <div class="text-xs font-bold text-slate-500 mb-4">پاسخ دقیق را وارد کن و دکمه «ثبت پاسخ» را بزن:</div>
+        <div class="math-eq" dir="ltr">
+          <span id="exam-q-a" class="text-4xl font-black text-slate-900">۸</span>
+          <span id="exam-q-op" class="text-4xl font-black text-blue-600">×</span>
+          <span id="exam-q-b" class="text-4xl font-black text-slate-900">۷</span>
+          <span class="text-3xl font-black text-slate-500">=</span>
+          <div id="exam-answer-box" class="min-w-[86px] h-14 px-3 rounded-2xl bg-slate-50 border-2 border-blue-500 flex items-center justify-center text-4xl font-black text-blue-700">
+            ؟
+          </div>
+        </div>
+        <div class="mt-4 text-[11px] font-semibold text-slate-400">
+          دانش‌آموز: <span id="exam-student-name" class="text-slate-700 font-bold"></span> • محیط رسمی آزمون
+        </div>
+      </div>
+
+      <div id="exam-numpad" class="grid grid-cols-3 gap-2 pb-1" dir="ltr">
+        <button class="exam-num-key" data-digit="1">۱</button>
+        <button class="exam-num-key" data-digit="2">۲</button>
+        <button class="exam-num-key" data-digit="3">۳</button>
+        <button class="exam-num-key" data-digit="4">۴</button>
+        <button class="exam-num-key" data-digit="5">۵</button>
+        <button class="exam-num-key" data-digit="6">۶</button>
+        <button class="exam-num-key" data-digit="7">۷</button>
+        <button class="exam-num-key" data-digit="8">۸</button>
+        <button class="exam-num-key" data-digit="9">۹</button>
+        <button class="exam-num-key exam-del-key" id="exam-key-del">⌫</button>
+        <button class="exam-num-key" data-digit="0">۰</button>
+        <button class="exam-num-key exam-submit-key" id="exam-key-submit">ثبت پاسخ ✓</button>
+      </div>
+    </section>
+
+    <!-- صفحه کارنامه آزمون رسمی + QR Code + کد MG4 -->
+    <section id="view-exam-report" class="hidden flex-1 flex flex-col bg-slate-100 text-slate-900 p-4 gap-3.5 min-h-[100dvh]">
+      <div class="bg-white rounded-3xl p-5 shadow-md border border-slate-200 text-center">
+        <div class="inline-block px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-extrabold mb-2">
+          کارنامه رسمی ارزیابی پایه چهارم
+        </div>
+        <h2 id="report-student-title" class="text-xl font-black text-slate-900">کارنامه دانش‌آموز</h2>
+        <div class="grid grid-cols-3 gap-2 mt-4">
+          <div class="p-3 rounded-2xl bg-emerald-50 border border-emerald-200">
+            <div class="text-[11px] font-bold text-emerald-700">نمره از ۲۰</div>
+            <div id="report-score" class="text-2xl font-black text-emerald-700 mt-0.5">۲۰</div>
+          </div>
+          <div class="p-3 rounded-2xl bg-blue-50 border border-blue-200">
+            <div class="text-[11px] font-bold text-blue-700">درصد دقت</div>
+            <div id="report-percent" class="text-2xl font-black text-blue-700 mt-0.5">۱۰۰٪</div>
+          </div>
+          <div class="p-3 rounded-2xl bg-amber-50 border border-amber-200">
+            <div class="text-[11px] font-bold text-amber-700">زمان کل</div>
+            <div id="report-time" class="text-xl font-black text-amber-700 mt-1">۴۵ ث</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
+        <div class="text-xs font-extrabold text-slate-700 mb-2">📌 لیست اشتباهات:</div>
+        <div id="report-wrong-list" class="flex flex-wrap gap-1.5 text-xs"></div>
+      </div>
+
+      <div class="bg-white rounded-3xl p-4 shadow-md border-2 border-blue-200 text-center space-y-3">
+        <div class="text-xs font-black text-blue-800">📲 ارسال کارنامه به معلم (اسکن QR یا کپی کد کارنامه)</div>
+
+        <div class="flex justify-center">
+          <div id="report-qrcode" class="p-2.5 bg-white rounded-2xl border border-slate-200 inline-block"></div>
+        </div>
+
+        <textarea
+          id="report-code-output"
+          readonly
+          rows="2"
+          dir="ltr"
+          class="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-800 font-mono text-[11px] break-all focus:outline-none"
+        ></textarea>
+
+        <button id="btn-copy-exam-code" class="game-btn w-full py-3.5 rounded-xl bg-blue-600 text-white font-black text-sm shadow-md shadow-blue-500/25">
+          📋 کپی کد کارنامه برای معلم
+        </button>
+      </div>
+
+      <div class="flex gap-2.5 pb-3 mt-auto">
+        <button id="btn-exam-retake" class="game-btn flex-1 py-3.5 rounded-2xl bg-white border border-slate-300 text-slate-800 font-bold text-sm">
+          🔄 آزمون مجدد
+        </button>
+        <button id="btn-exam-home" class="game-btn flex-1 py-3.5 rounded-2xl bg-slate-900 text-white font-black text-sm">
+          🏠 بازگشت به بازی
+        </button>
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- مودال فروشگاه تجهیزات (سفینه‌ها، رنگ لیزرها، آواتارها) -->
+    <!-- =================================================================== -->
+    <div id="modal-shop" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3">
+      <div class="w-full max-w-[460px] max-h-[88dvh] flex flex-col glass-panel rounded-3xl border-amber-400/50 overflow-hidden">
+        <div class="p-4 border-b border-slate-700/70 flex items-center justify-between">
+          <div>
+            <h3 class="text-base font-black text-amber-300">🛒 فروشگاه تجهیزات فضایی</h3>
+            <div class="text-xs font-bold text-slate-300 mt-0.5">موجودی تو: <span id="shop-coins-label" class="text-amber-300 font-black">۰ 🪙</span></div>
+          </div>
+          <button id="btn-close-shop" class="game-btn w-9 h-9 rounded-xl bg-slate-800 text-slate-200 font-black">✕</button>
+        </div>
+
+        <div class="grid grid-cols-3 gap-1.5 p-3 pb-0">
+          <button data-shop-tab="ships" class="shop-tab-btn game-btn py-2 rounded-xl text-xs font-black bg-cyan-500/25 border border-cyan-400 text-cyan-200">🚀 سفینه‌ها</button>
+          <button data-shop-tab="lasers" class="shop-tab-btn game-btn py-2 rounded-xl text-xs font-bold bg-slate-900 border border-slate-700 text-slate-400">⚡ رنگ لیزر</button>
+          <button data-shop-tab="avatars" class="shop-tab-btn game-btn py-2 rounded-xl text-xs font-bold bg-slate-900 border border-slate-700 text-slate-400">👨‍🚀 آواتارها</button>
+        </div>
+
+        <div id="shop-items-grid" class="p-3 grid grid-cols-2 gap-2.5 overflow-y-auto flex-1"></div>
+      </div>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- مودال راهنمای هر مود (❓) -->
+    <!-- =================================================================== -->
+    <div id="modal-help" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="w-full max-w-[400px] glass-panel rounded-3xl p-5 border-cyan-400/50 text-center space-y-3">
+        <div id="help-icon" class="text-5xl">🚀</div>
+        <h3 id="help-title" class="text-lg font-black text-white">راهنمای بازی</h3>
+        <p id="help-body" class="text-xs text-slate-200 leading-7 text-right bg-slate-950/60 p-3.5 rounded-2xl border border-slate-800"></p>
+        <div id="help-reward" class="text-xs font-extrabold text-amber-300 bg-amber-500/15 border border-amber-400/35 py-2 px-3 rounded-xl"></div>
+        <button id="btn-close-help" class="game-btn w-full py-3 rounded-2xl bg-gradient-to-l from-cyan-500 to-blue-600 text-white font-black text-sm">
+          متوجه شدم! 👍
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    /*************************************************************************
+     * فرمانده اعداد: کهکشان ضرب و تقسیم (نسخه بهینه و یکپارچه)
+     * ۴ مود اصلی + فروشگاه | نقشه رنگی سبز/قرمز/سیاه | باشگاه تقویت بدون باگ
+     * دوئل روبه‌رو و چرخش افقی موبایل | آزمون رسمی با رمزنگاری دقیق MG4
+     *************************************************************************/
+    (function () {
+      'use strict';
+
+      /* =====================================================================
+         1. ابزارهای کمکی و اعداد فارسی
+         ===================================================================== */
+      const STORAGE_KEY = 'gmc_v4_student_profile';
+      const LEGACY_KEY = 'gmc_v3_student_profile';
+      const FA_DIGITS = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+
+      function toFa(val) {
+        return String(val).replace(/\d/g, (d) => FA_DIGITS[Number(d)]);
+      }
+
+      function randInt(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+
+      function shuffle(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+      }
+
+      function todayISO() {
+        return new Date().toISOString().slice(0, 10);
+      }
+
+      let toastTimer = null;
+      function showToast(msg, duration = 2300) {
+        const el = document.getElementById('toast');
+        el.textContent = msg;
+        el.classList.remove('hidden');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => el.classList.add('hidden'), duration);
+      }
+
+      /* ساخت کلید استاندارد و بدون خطا برای هر ضرب یا تقسیم */
+      function makeMul(a, b) {
+        return { op: 'mul', opChar: '×', a, b, answer: a * b, key: `mul_${a}_${b}` };
+      }
+
+      function makeDiv(dividend, divisor) {
+        return { op: 'div', opChar: '÷', a: dividend, b: divisor, answer: dividend / divisor, key: `div_${dividend}_${divisor}` };
+      }
+
+      function keyToQ(key) {
+        const parts = String(key).split('_');
+        if (parts.length !== 3) return null;
+        const a = Number(parts[1]);
+        const b = Number(parts[2]);
+        if (!Number.isFinite(a) || !Number.isFinite(b) || b === 0) return null;
+        return parts[0] === 'mul' ? makeMul(a, b) : parts[0] === 'div' ? makeDiv(a, b) : null;
+      }
+
+      /* ساخت چیپ HTML کاملاً چپ‌به‌راست (LTR) برای معادلات */
+      function eqChipHtml(a, opChar, b, ans = null) {
+        const ansPart = ans !== null ? `<span>=</span><span class="text-white">${toFa(ans)}</span>` : '';
+        return `<span class="math-chip" dir="ltr"><span>${toFa(a)}</span><span>${opChar}</span><span>${toFa(b)}</span>${ansPart}</span>`;
+      }
+
+      /* =====================================================================
+         2. کاتالوگ فروشگاه: ۵ سفینه، ۴ رنگ لیزر، ۵ آواتار
+         ===================================================================== */
+      const SHIPS = [
+        {
+          id: 'blue_explorer',
+          name: 'کاوشگر آبی',
+          price: 0,
+          svg: `<svg viewBox="0 0 80 80" class="w-full h-full">
+            <defs><linearGradient id="sBlue" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#38bdf8"/><stop offset="100%" stop-color="#1d4ed8"/></linearGradient></defs>
+            <path d="M40 6 L56 44 L48 56 L32 56 L24 44 Z" fill="url(#sBlue)" stroke="#e0f2fe" stroke-width="2.2"/>
+            <path d="M24 42 L10 60 L29 53 Z" fill="#0284c7" stroke="#7dd3fc" stroke-width="1.5"/>
+            <path d="M56 42 L70 60 L51 53 Z" fill="#0284c7" stroke="#7dd3fc" stroke-width="1.5"/>
+            <circle cx="40" cy="31" r="7" fill="#0f172a" stroke="#00f0ff" stroke-width="2.5"/>
+            <path d="M35 58 L40 74 L45 58 Z" fill="#38bdf8"/>
+          </svg>`
+        },
+        {
+          id: 'golden_hunter',
+          name: 'شکارچی طلایی',
+          price: 50,
+          svg: `<svg viewBox="0 0 80 80" class="w-full h-full">
+            <defs><linearGradient id="sGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#fef08a"/><stop offset="50%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#b45309"/></linearGradient></defs>
+            <path d="M40 5 L58 39 L50 58 L30 58 L22 39 Z" fill="url(#sGold)" stroke="#ffffff" stroke-width="2.2"/>
+            <path d="M22 36 L6 56 L28 52 Z" fill="#78350f" stroke="#fde047" stroke-width="1.8"/>
+            <path d="M58 36 L74 56 L52 52 Z" fill="#78350f" stroke="#fde047" stroke-width="1.8"/>
+            <polygon points="40,19 45,29 55,30 47,37 49,47 40,42 31,47 33,37 25,30 35,29" fill="#fffbeb"/>
+            <path d="M33 60 L40 76 L47 60 Z" fill="#38bdf8"/>
+          </svg>`
+        },
+        {
+          id: 'neon_eagle',
+          name: 'عقاب نئونی',
+          price: 90,
+          svg: `<svg viewBox="0 0 80 80" class="w-full h-full">
+            <defs><linearGradient id="sNeon" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#34d399"/><stop offset="100%" stop-color="#065f46"/></linearGradient></defs>
+            <path d="M40 6 L53 38 L46 58 L34 58 L27 38 Z" fill="url(#sNeon)" stroke="#a7f3d0" stroke-width="2"/>
+            <path d="M27 34 L6 46 L25 54 Z" fill="#0f172a" stroke="#10b981" stroke-width="2"/>
+            <path d="M53 34 L74 46 L55 54 Z" fill="#0f172a" stroke="#10b981" stroke-width="2"/>
+            <rect x="33" y="28" width="14" height="6" rx="3" fill="#0f172a" stroke="#6ee7b7" stroke-width="1.5"/>
+            <path d="M36 60 L40 74 L44 60 Z" fill="#10b981"/>
+          </svg>`
+        },
+        {
+          id: 'fire_dragon',
+          name: 'اژدهای آتشین',
+          price: 130,
+          svg: `<svg viewBox="0 0 80 80" class="w-full h-full">
+            <defs><linearGradient id="sFire" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fb923c"/><stop offset="100%" stop-color="#dc2626"/></linearGradient></defs>
+            <path d="M40 5 L58 40 L50 58 L30 58 L22 40 Z" fill="url(#sFire)" stroke="#fef08a" stroke-width="2"/>
+            <path d="M22 36 L6 54 L26 52 Z" fill="#991b1b" stroke="#f97316" stroke-width="1.5"/>
+            <path d="M58 36 L74 54 L54 52 Z" fill="#991b1b" stroke="#f97316" stroke-width="1.5"/>
+            <polygon points="40,22 47,36 40,42 33,36" fill="#fef08a"/>
+            <path d="M33 60 L40 76 L47 60 Z" fill="#facc15"/>
+          </svg>`
+        },
+        {
+          id: 'galaxy_cruiser',
+          name: 'ناو کهکشانی',
+          price: 180,
+          svg: `<svg viewBox="0 0 80 80" class="w-full h-full">
+            <defs><linearGradient id="sPurp" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#e879f9"/><stop offset="100%" stop-color="#6d28d9"/></linearGradient></defs>
+            <path d="M40 4 L60 44 L48 58 L32 58 L20 44 Z" fill="url(#sPurp)" stroke="#f5d0fe" stroke-width="2"/>
+            <path d="M20 42 L6 62 L28 54 Z" fill="#4c1d95" stroke="#c084fc" stroke-width="1.5"/>
+            <path d="M60 42 L74 62 L52 54 Z" fill="#4c1d95" stroke="#c084fc" stroke-width="1.5"/>
+            <circle cx="40" cy="33" r="8" fill="#1e1b4b" stroke="#f0abfc" stroke-width="2.5"/>
+            <path d="M34 60 L40 77 L46 60 Z" fill="#e879f9"/>
+          </svg>`
+        }
+      ];
+
+      const LASERS = [
+        { id: 'plasma_blue', name: 'آبی پلاسما', price: 0, color: '#00f0ff', core: '#e0f2fe' },
+        { id: 'emerald_green', name: 'سبز زمردی', price: 40, color: '#10b981', core: '#d1fae5' },
+        { id: 'quantum_purple', name: 'بنفش کوانتومی', price: 85, color: '#c084fc', core: '#faf5ff' },
+        { id: 'solar_gold', name: 'طلایی خورشیدی', price: 130, color: '#facc15', core: '#fefce8' }
+      ];
+
+      const AVATARS = [
+        { id: 'astronaut', name: 'فضانورد', emoji: '👨‍🚀', price: 0, bg: 'from-sky-500/30 to-blue-900/80' },
+        { id: 'hero', name: 'ابرقهرمان', emoji: '🦸‍♂️', price: 45, bg: 'from-rose-500/30 to-red-900/80' },
+        { id: 'robot', name: 'ربات هوشمند', emoji: '🤖', price: 75, bg: 'from-indigo-500/30 to-slate-900/80' },
+        { id: 'lion', name: 'شیر شجاع', emoji: '🦁', price: 110, bg: 'from-amber-500/30 to-orange-900/80' },
+        { id: 'dragon', name: 'اژدهای کیهانی', emoji: '🐉', price: 150, bg: 'from-emerald-500/30 to-teal-900/80' }
+      ];
+
+      /* =====================================================================
+         3. باس‌ها و ۱۰ مرحله متصل داستانی (با Shuffle Bag ضدتکرار)
+         ===================================================================== */
+      const BOSS_SVGS = {
+        drone: `<svg viewBox="0 0 90 90" class="w-full h-full"><circle cx="45" cy="45" r="26" fill="#334155" stroke="#38bdf8" stroke-width="3"/><path d="M10 45 L24 38 L24 52 Z" fill="#0284c7"/><path d="M80 45 L66 38 L66 52 Z" fill="#0284c7"/><circle cx="45" cy="45" r="11" fill="#0f172a" stroke="#f59e0b" stroke-width="2.5"/><circle cx="45" cy="45" r="5" fill="#f43f5e"/></svg>`,
+        icebot: `<svg viewBox="0 0 90 90" class="w-full h-full"><polygon points="45,8 76,28 70,70 45,82 20,70 14,28" fill="#0c4a6e" stroke="#7dd3fc" stroke-width="3"/><rect x="26" y="34" width="38" height="14" rx="6" fill="#0f172a"/><circle cx="36" cy="41" r="4" fill="#38bdf8"/><circle cx="54" cy="41" r="4" fill="#38bdf8"/><path d="M32,58 L45,64 L58,58" fill="none" stroke="#bae6fd" stroke-width="3" stroke-linecap="round"/></svg>`,
+        mars: `<svg viewBox="0 0 90 90" class="w-full h-full"><path d="M20,16 L70,16 L80,46 L62,78 L28,78 L10,46 Z" fill="#7f1d1d" stroke="#fb923c" stroke-width="3"/><polygon points="26,38 40,44 28,48" fill="#fef08a"/><polygon points="64,38 50,44 62,48" fill="#fef08a"/><line x1="30" y1="62" x2="60" y2="62" stroke="#fca5a5" stroke-width="4" stroke-linecap="round"/></svg>`,
+        hunter: `<svg viewBox="0 0 90 90" class="w-full h-full"><polygon points="45,6 82,45 45,84 8,45" fill="#78350f" stroke="#facc15" stroke-width="3"/><circle cx="45" cy="45" r="16" fill="#1e293b" stroke="#fde047" stroke-width="2.5"/><polygon points="45,34 54,45 45,56 36,45" fill="#f59e0b"/></svg>`,
+        lava: `<svg viewBox="0 0 90 90" class="w-full h-full"><path d="M16,28 L34,10 L56,10 L74,28 L78,62 L56,82 L34,82 L12,62 Z" fill="#450a0a" stroke="#f97316" stroke-width="3.5"/><circle cx="34" cy="42" r="6" fill="#facc15"/><circle cx="56" cy="42" r="6" fill="#facc15"/><path d="M28,62 L38,56 L45,64 L52,56 L62,62" fill="none" stroke="#fb923c" stroke-width="4" stroke-linecap="round"/></svg>`,
+        shadow: `<svg viewBox="0 0 90 90" class="w-full h-full"><path d="M45,8 L78,56 L60,76 L30,76 L12,56 Z" fill="#1e1b4b" stroke="#a855f7" stroke-width="3"/><polygon points="28,46 42,50 32,56" fill="#f43f5e"/><polygon points="62,46 48,50 58,56" fill="#f43f5e"/><circle cx="45" cy="30" r="6" fill="#c084fc"/></svg>`,
+        dragon: `<svg viewBox="0 0 90 90" class="w-full h-full"><path d="M14,26 L30,14 L45,26 L60,14 L76,26 L68,72 L45,82 L22,72 Z" fill="#064e3b" stroke="#34d399" stroke-width="3"/><polygon points="28,42 40,48 30,52" fill="#facc15"/><polygon points="62,42 50,48 60,52" fill="#facc15"/><path d="M32,64 L45,58 L58,64" fill="none" stroke="#6ee7b7" stroke-width="4" stroke-linecap="round"/></svg>`,
+        cosmic: `<svg viewBox="0 0 90 90" class="w-full h-full"><circle cx="45" cy="45" r="32" fill="#3b0764" stroke="#e879f9" stroke-width="3.5"/><circle cx="45" cy="45" r="20" fill="none" stroke="#38bdf8" stroke-width="3" stroke-dasharray="10 6"/><circle cx="36" cy="42" r="4.5" fill="#facc15"/><circle cx="54" cy="42" r="4.5" fill="#facc15"/><circle cx="45" cy="56" r="5" fill="#f43f5e"/></svg>`,
+        fortress: `<svg viewBox="0 0 90 90" class="w-full h-full"><rect x="14" y="16" width="62" height="58" rx="14" fill="#1e293b" stroke="#94a3b8" stroke-width="3.5"/><rect x="24" y="30" width="42" height="14" rx="5" fill="#0f172a"/><circle cx="35" cy="37" r="4.5" fill="#ef4444"/><circle cx="55" cy="37" r="4.5" fill="#ef4444"/><rect x="28" y="54" width="34" height="8" rx="4" fill="#38bdf8"/></svg>`,
+        darklord: `<svg viewBox="0 0 90 90" class="w-full h-full"><path d="M10,36 L26,14 L45,26 L64,14 L80,36 L68,74 L45,86 L22,74 Z" fill="#4c0519" stroke="#f43f5e" stroke-width="3.5"/><polygon points="24,18 12,4 34,14" fill="#fb7185"/><polygon points="66,18 78,4 56,14" fill="#fb7185"/><polygon points="27,42 40,48 29,53" fill="#facc15"/><polygon points="63,42 50,48 61,53" fill="#facc15"/><path d="M30,65 L45,74 L60,65" fill="none" stroke="#fda4af" stroke-width="4" stroke-linecap="round"/></svg>`,
+        gym: `<svg viewBox="0 0 90 90" class="w-full h-full"><circle cx="45" cy="45" r="34" fill="#064e3b" stroke="#10b981" stroke-width="3.5"/><circle cx="45" cy="45" r="22" fill="none" stroke="#34d399" stroke-width="3" stroke-dasharray="8 6"/><circle cx="45" cy="45" r="10" fill="#fbbf24"/></svg>`
+      };
+
+      function buildMulDeck(firstArr, secondMin = 2, secondMax = 10) {
+        const list = [];
+        const seen = new Set();
+        for (const a of firstArr) {
+          for (let b = secondMin; b <= secondMax; b++) {
+            const q = makeMul(a, b);
+            if (!seen.has(q.key)) { seen.add(q.key); list.push(q); }
+          }
+        }
+        return list;
+      }
+
+      function buildDivDeck(divisors, qMin = 2, qMax = 10) {
+        const list = [];
+        const seen = new Set();
+        for (const d of divisors) {
+          for (let q = qMin; q <= qMax; q++) {
+            const item = makeDiv(d * q, d);
+            if (!seen.has(item.key)) { seen.add(item.key); list.push(item); }
+          }
+        }
+        return list;
+      }
+
+      const STORY_STAGES = [
+        { id: 1, bossEmoji: '🛸', bossName: 'پهپاد نگهبان', topic: 'ضرب ۲، ۵ و ۱۰', bossSvg: 'drone', maxHp: 50, rewardCoins: 30, buildDeck: () => buildMulDeck([2, 5, 10], 2, 10) },
+        { id: 2, bossEmoji: '❄️', bossName: 'ربات یخ‌شکن', topic: 'ضرب ۳ و ۴', bossSvg: 'icebot', maxHp: 50, rewardCoins: 35, buildDeck: () => buildMulDeck([3, 4], 2, 10) },
+        { id: 3, bossEmoji: '🔴', bossName: 'نگهبان سرخ', topic: 'تقسیم ۲، ۳ و ۵', bossSvg: 'mars', maxHp: 50, rewardCoins: 35, buildDeck: () => buildDivDeck([2, 3, 5], 2, 10) },
+        { id: 4, bossEmoji: '⚡', bossName: 'شکارچی انرژی', topic: 'ضرب ۶ و ۷', bossSvg: 'hunter', maxHp: 60, rewardCoins: 40, buildDeck: () => buildMulDeck([6, 7], 2, 10) },
+        { id: 5, bossEmoji: '🌋', bossName: 'تایتان گدازه', topic: 'تقسیم ۴، ۶ و ۷', bossSvg: 'lava', maxHp: 60, rewardCoins: 45, buildDeck: () => buildDivDeck([4, 6, 7], 2, 10) },
+        { id: 6, bossEmoji: '👾', bossName: 'ناوشکن سایه', topic: 'ضرب ۸ و ۹', bossSvg: 'shadow', maxHp: 60, rewardCoins: 45, buildDeck: () => buildMulDeck([8, 9], 2, 10) },
+        { id: 7, bossEmoji: '🐉', bossName: 'اژدهای لیزری', topic: 'تقسیم ۸ و ۹', bossSvg: 'dragon', maxHp: 70, rewardCoins: 50, buildDeck: () => buildDivDeck([8, 9], 2, 10) },
+        { id: 8, bossEmoji: '🌌', bossName: 'هیولای کیهانی', topic: 'ضرب ۳ تا ۹', bossSvg: 'cosmic', maxHp: 70, rewardCoins: 50, buildDeck: () => buildMulDeck([3, 4, 5, 6, 7, 8, 9], 3, 9) },
+        { id: 9, bossEmoji: '🏰', bossName: 'دژ پولادین', topic: 'تقسیم ۳ تا ۹', bossSvg: 'fortress', maxHp: 70, rewardCoins: 55, buildDeck: () => buildDivDeck([3, 4, 5, 6, 7, 8, 9], 3, 9) },
+        {
+          id: 10, bossEmoji: '👑', bossName: 'فرمانروای تاریکی', topic: 'نبرد نهایی', bossSvg: 'darklord', maxHp: 80, rewardCoins: 65, isFinal: true,
+          buildDeck: () => [...buildMulDeck([4, 5, 6, 7, 8, 9], 3, 9), ...buildDivDeck([4, 5, 6, 7, 8, 9], 3, 9)]
+        }
+      ];
+
+      /* =====================================================================
+         4. بازخوردهای متنی و راهنمای مودها
+         ===================================================================== */
+      const ENCOURAGE_NORMAL = ['شلیک دقیق! 💥', 'آفرین فرمانده! 🚀', 'هدف نابود شد! 🎯', 'عالی بود! ✨', 'ایول! ادامه بده! 💪'];
+      const ENCOURAGE_CRIT = ['ضربه بحرانی ۲ برابر! ⚡', 'سرعت فضایی! 🔥', 'شلیک افسانه‌ای! 🌟', 'فوق‌العاده سریع! ⚡'];
+      const ENCOURAGE_MISS = ['نزدیک بود، دوباره تمرکز کن! 🛡️', 'اشکالی نداره، بعدی رو می‌زنی! 💪', 'سپر لرزید، دقت کن! 🛡️'];
+
+      const HELP_CONTENT = {
+        story: {
+          icon: '🚀',
+          title: 'راهنمای نبرد داستانی',
+          body: '۱۰ مرحله فضایی برای نجات کهکشان اعداد! مراحل سبز فتح شدن، مرحله قرمز آماده نبرده و مراحل سیاه با بردن مرحله قبل باز میشن. پاسخ زیر ۵ ثانیه ضربه بحرانی می‌زنه و وقتی جان دشمن نصف بشه فاز خشم فعال میشه و سکه‌ها ۲ برابر میشن!',
+          reward: '🎁 جایزه: سکه 🪙 + XP ارتقای سطح + باز شدن مرحله بعد'
+        },
+        gym: {
+          icon: '💪',
+          title: 'راهنمای باشگاه تقویت ضرب',
+          body: 'فقط ضرب‌ها و تقسیم‌هایی که اشتباه جواب دادی میان توی بخش قرمز (نیاز به تمرین) تا تمرینشون کنی! وقتی درست جواب بدی میرن بخش زرد (در حال یادگیری) و بعد سبز (مسلط شدم 🟢). همچنین می‌تونی هر جدول ضربی رو جداگانه تمرین کنی.',
+          reward: '🎁 جایزه: سکه 🪙 + XP + تسلط کامل روی اشتباهات'
+        },
+        duel: {
+          icon: '⚔️',
+          title: 'راهنمای دوئل دو نفره',
+          body: 'مسابقه سرعتی با دوستت یا همکلاسی! گوشی رو وسط میز بذارید و روبه‌رو بازی کنید، یا گوشی رو افقی بچرخونید (یا دکمه «🔄 چرخش افقی» رو بزنید) تا کنار هم مسابقه بدید. هر کی زودتر جواب درست رو بزنه نوار انرژی رو هل میده!',
+          reward: '🎁 جایزه: تاج قهرمانی دوئل 👑 و هیجان فوق‌العاده!'
+        },
+        exam: {
+          icon: '📝',
+          title: 'راهنمای آزمون رسمی',
+          body: 'یک آزمون ۱۵ سوالی آرام و رسمی از ضرب و تقسیم پایه چهارم. آخر آزمون کارنامه کاملت به همراه QR Code و کد کارنامه رمزی ساخته میشه تا برای معلمت بفرستی!',
+          reward: '🎁 خروجی: کارنامه رسمی + کد MG4 و QR Code برای معلم'
+        }
+      };
+
+      /* =====================================================================
+         5. موتور صوتی Web Audio API
+         ===================================================================== */
+      const SFX = {
+        ctx: null,
+        muted: false,
+        ensure() {
+          try {
+            if (!this.ctx) {
+              const AC = window.AudioContext || window.webkitAudioContext;
+              if (AC) this.ctx = new AC();
+            }
+            if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+          } catch (e) {}
+        },
+        tone(freq, dur, type = 'sine', vol = 0.13, delay = 0, freqEnd = null) {
+          if (this.muted) return;
+          try {
+            this.ensure();
+            if (!this.ctx) return;
+            const now = this.ctx.currentTime + delay;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, now);
+            if (freqEnd !== null) osc.frequency.exponentialRampToValueAtTime(Math.max(20, freqEnd), now + dur);
+            gain.gain.setValueAtTime(vol, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + dur);
+          } catch (e) {}
+        },
+        click() { this.tone(560, 0.045, 'triangle', 0.08); },
+        laser() {
+          this.tone(1120, 0.16, 'sawtooth', 0.1, 0, 220);
+          this.tone(760, 0.12, 'triangle', 0.08, 0.02, 320);
+        },
+        critical() {
+          this.tone(880, 0.1, 'triangle', 0.13, 0, 1320);
+          this.tone(1320, 0.16, 'sine', 0.13, 0.07, 1760);
+        },
+        explosion() {
+          this.tone(175, 0.25, 'sawtooth', 0.15, 0, 40);
+          this.tone(105, 0.3, 'square', 0.09, 0.04, 28);
+        },
+        shieldHit() {
+          this.tone(190, 0.18, 'sawtooth', 0.15, 0, 95);
+          this.tone(130, 0.22, 'square', 0.1, 0.08, 65);
+        },
+        coin() {
+          this.tone(987, 0.09, 'sine', 0.11, 0);
+          this.tone(1318, 0.16, 'sine', 0.12, 0.07);
+        },
+        victory() {
+          [523, 659, 784, 1046, 1318].forEach((f, i) => this.tone(f, 0.2, 'triangle', 0.14, i * 0.09));
+        },
+        levelUp() {
+          [440, 554, 659, 880, 1108].forEach((f, i) => this.tone(f, 0.18, 'sine', 0.14, i * 0.08));
+        },
+        defeat() {
+          [340, 290, 230, 170].forEach((f, i) => this.tone(f, 0.22, 'sawtooth', 0.1, i * 0.12));
+        },
+        bossAlarm() {
+          for (let i = 0; i < 3; i++) {
+            this.tone(420, 0.17, 'sawtooth', 0.12, i * 0.25, 790);
+            this.tone(790, 0.12, 'sawtooth', 0.1, i * 0.25 + 0.13, 380);
+          }
+        }
+      };
+
+      /* =====================================================================
+         6. وضعیت پروفایل و منطق کاملاً بدون باگ باشگاه تقویت (mastery)
+         ===================================================================== */
+      let state = {
+        name: '',
+        xp: 0,
+        level: 1,
+        coins: 20,
+        muted: false,
+        completedStages: [],
+        ownedShips: ['blue_explorer'],
+        equippedShip: 'blue_explorer',
+        ownedLasers: ['plasma_blue'],
+        equippedLaser: 'plasma_blue',
+        ownedAvatars: ['astronaut'],
+        equippedAvatar: 'astronaut',
+        // حافظه کاملاً خالی در شروع: فقط سوالاتی که دانش‌آموز واقعاً پاسخ داده ثبت می‌شوند
+        // box = 1 (قرمز: فقط اشتباه) | box = 2 (زرد: در حال یادگیری / کند بالای ۷ث) | box = 3 (سبز: مسلط)
+        mastery: {}
+      };
+
+      function xpNeededForLevel(lvl) {
+        return 100 + (lvl - 1) * 50;
+      }
+
+      function addRewards(coinsAmt, xpAmt) {
+        state.coins += coinsAmt;
+        state.xp += xpAmt;
+        let leveledUp = false;
+        while (state.xp >= xpNeededForLevel(state.level)) {
+          state.xp -= xpNeededForLevel(state.level);
+          state.level += 1;
+          leveledUp = true;
+        }
+        saveState();
+        return leveledUp;
+      }
+
+      function canAffordAnyUnownedItem() {
+        const shipAvail = SHIPS.some((s) => s.price > 0 && !state.ownedShips.includes(s.id) && state.coins >= s.price);
+        const laserAvail = LASERS.some((l) => l.price > 0 && !state.ownedLasers.includes(l.id) && state.coins >= l.price);
+        const avAvail = AVATARS.some((a) => a.price > 0 && !state.ownedAvatars.includes(a.id) && state.coins >= a.price);
+        return shipAvail || laserAvail || avAvail;
+      }
+
+      function loadState() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            state = Object.assign(state, parsed);
+          } else {
+            // مهاجرت امن فقط نام و سکه‌ها از نسخه قبلی بدون انتقال لیست قدیمی حافظه
+            const oldRaw = localStorage.getItem(LEGACY_KEY);
+            if (oldRaw) {
+              const old = JSON.parse(oldRaw);
+              if (old.name) state.name = old.name;
+              if (typeof old.coins === 'number') state.coins = old.coins;
+              if (typeof old.level === 'number') state.level = old.level;
+              if (typeof old.xp === 'number') state.xp = old.xp;
+              if (Array.isArray(old.completedStages)) state.completedStages = old.completedStages;
+            }
+          }
+          if (!state.mastery || typeof state.mastery !== 'object') state.mastery = {};
+          if (!Array.isArray(state.completedStages)) state.completedStages = [];
+          if (!Array.isArray(state.ownedShips)) state.ownedShips = ['blue_explorer'];
+          if (!Array.isArray(state.ownedLasers)) state.ownedLasers = ['plasma_blue'];
+          if (!Array.isArray(state.ownedAvatars)) state.ownedAvatars = ['astronaut'];
+        } catch (e) {}
+        SFX.muted = !!state.muted;
+      }
+
+      function saveState() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (e) {}
+      }
+
+      /* قانون دقیق و بدون باگ باشگاه تقویت ضرب:
+         - فقط پاسخ غلط وارد قرمز (box = 1) می‌شود!
+         - پاسخ صحیح اما کند (> 7 ثانیه) وارد زرد (box = 2) می‌شود.
+         - پاسخ صحیح از قرمز -> زرد (box = 2).
+         - پاسخ صحیح از زرد یا پاسخ سریع و درست جدید -> سبز (box = 3). */
+      function recordMastery(key, isCorrect, seconds, source = 'other') {
+        if (!key || (!key.startsWith('mul_') && !key.startsWith('div_'))) return;
+        const cur = state.mastery[key] ? state.mastery[key].box : 0;
+
+        if (!isCorrect) {
+          state.mastery[key] = { box: 1 };
+        } else {
+          if (cur === 1) {
+            state.mastery[key] = { box: 2 };
+          } else if (cur === 2) {
+            state.mastery[key] = { box: seconds <= 7 || source === 'gym' ? 3 : 2 };
+          } else {
+            state.mastery[key] = { box: seconds > 7 ? 2 : 3 };
+          }
+        }
+        saveState();
+      }
+
+      function getMasteryBuckets() {
+        const red = [], yellow = [], green = [];
+        Object.entries(state.mastery).forEach(([k, v]) => {
+          if (!v || !keyToQ(k)) return;
+          if (v.box === 1) red.push(k);
+          else if (v.box === 2) yellow.push(k);
+          else if (v.box === 3) green.push(k);
+        });
+        return { red, yellow, green };
+      }
+
+      /* =====================================================================
+         7. پروتکل دقیق رمزنگاری گزارش آزمون رسمی (سازگار با پنل معلم)
+         UTF-8 -> XOR(EMAD_MATH4_KEY_2026) -> Base64URL -> Checksum(0x5A3C روی b64url)
+         ===================================================================== */
+      function encodeOfficialReport(payload) {
+        const jsonStr = JSON.stringify(payload);
+        const plainBytes = new TextEncoder().encode(jsonStr);
+        const keyBytes = new TextEncoder().encode('EMAD_MATH4_KEY_2026');
+        const xored = new Uint8Array(plainBytes.length);
+        for (let i = 0; i < plainBytes.length; i++) {
+          xored[i] = plainBytes[i] ^ keyBytes[i % keyBytes.length];
+        }
+        let bin = '';
+        for (let i = 0; i < xored.length; i++) {
+          bin += String.fromCharCode(xored[i]);
+        }
+        const b64url = btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+        let chk = 0x5A3C;
+        for (let i = 0; i < b64url.length; i++) {
+          chk = ((chk * 31) + b64url.charCodeAt(i)) & 0xFFFF;
+        }
+        const chkHex = chk.toString(16).toUpperCase().padStart(4, '0');
+        return `MG4-${chkHex}-${b64url}`;
+      }
+
+      /* =====================================================================
+         8. انیمیشن‌های بوم (پس‌زمینه کهکشانی + کنفتی + لیزر و ذرات برخورد)
+         ===================================================================== */
+      const bgCanvas = document.getElementById('bg-canvas');
+      const bgCtx = bgCanvas.getContext('2d');
+      let stars = [];
+      let shootingStars = [];
+      let bgPhase2 = false;
+
+      function initStars() {
+        bgCanvas.width = window.innerWidth;
+        bgCanvas.height = window.innerHeight;
+        stars = [];
+        const count = Math.min(115, Math.floor((bgCanvas.width * bgCanvas.height) / 8800));
+        for (let i = 0; i < count; i++) {
+          stars.push({
+            x: Math.random() * bgCanvas.width,
+            y: Math.random() * bgCanvas.height,
+            r: Math.random() * 1.7 + 0.5,
+            speed: Math.random() * 0.48 + 0.12,
+            phase: Math.random() * Math.PI * 2,
+            twinkle: Math.random() * 0.04 + 0.015
+          });
+        }
+      }
+
+      function animateBg() {
+        const w = bgCanvas.width, h = bgCanvas.height;
+        bgCtx.clearRect(0, 0, w, h);
+
+        const g1 = bgCtx.createRadialGradient(w * 0.2, h * 0.16, 10, w * 0.2, h * 0.16, w * 0.65);
+        g1.addColorStop(0, bgPhase2 ? 'rgba(225, 29, 72, 0.30)' : 'rgba(14, 165, 233, 0.18)');
+        g1.addColorStop(1, 'rgba(6, 10, 22, 0)');
+        bgCtx.fillStyle = g1;
+        bgCtx.fillRect(0, 0, w, h);
+
+        const g2 = bgCtx.createRadialGradient(w * 0.84, h * 0.82, 10, w * 0.84, h * 0.82, w * 0.55);
+        g2.addColorStop(0, bgPhase2 ? 'rgba(147, 51, 234, 0.28)' : 'rgba(16, 185, 129, 0.13)');
+        g2.addColorStop(1, 'rgba(6, 10, 22, 0)');
+        bgCtx.fillStyle = g2;
+        bgCtx.fillRect(0, 0, w, h);
+
+        for (const s of stars) {
+          s.y += bgPhase2 ? s.speed * 2.5 : s.speed;
+          s.phase += s.twinkle;
+          if (s.y > h) { s.y = -2; s.x = Math.random() * w; }
+          const alpha = 0.35 + Math.abs(Math.sin(s.phase)) * 0.65;
+          bgCtx.fillStyle = bgPhase2 ? `rgba(254, 202, 202, ${alpha})` : `rgba(224, 242, 254, ${alpha})`;
+          bgCtx.beginPath();
+          bgCtx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+          bgCtx.fill();
+        }
+
+        if (Math.random() < 0.008 && shootingStars.length < 2) {
+          shootingStars.push({
+            x: Math.random() * w,
+            y: Math.random() * h * 0.4,
+            vx: (Math.random() < 0.5 ? -1 : 1) * (Math.random() * 5 + 5),
+            vy: Math.random() * 3 + 3,
+            life: 26,
+            maxLife: 26
+          });
+        }
+        for (let i = shootingStars.length - 1; i >= 0; i--) {
+          const st = shootingStars[i];
+          const a = st.life / st.maxLife;
+          bgCtx.save();
+          bgCtx.strokeStyle = bgPhase2 ? `rgba(251, 113, 133, ${a})` : `rgba(125, 211, 252, ${a})`;
+          bgCtx.lineWidth = 2;
+          bgCtx.beginPath();
+          bgCtx.moveTo(st.x, st.y);
+          bgCtx.lineTo(st.x - st.vx * 3, st.y - st.vy * 3);
+          bgCtx.stroke();
+          bgCtx.restore();
+          st.x += st.vx; st.y += st.vy; st.life--;
+          if (st.life <= 0) shootingStars.splice(i, 1);
+        }
+        requestAnimationFrame(animateBg);
+      }
+
+      const confCanvas = document.getElementById('confetti-canvas');
+      const confCtx = confCanvas.getContext('2d');
+      let confettiPieces = [];
+
+      function resizeConfetti() {
+        confCanvas.width = window.innerWidth;
+        confCanvas.height = window.innerHeight;
+      }
+
+      function launchConfetti(count = 70) {
+        const colors = ['#00f0ff', '#10b981', '#facc15', '#f43f5e', '#c084fc', '#ffffff'];
+        for (let i = 0; i < count; i++) {
+          confettiPieces.push({
+            x: Math.random() * confCanvas.width,
+            y: -15 - Math.random() * 120,
+            vx: (Math.random() - 0.5) * 5,
+            vy: Math.random() * 3.5 + 2.5,
+            size: Math.random() * 7 + 4,
+            rot: Math.random() * 360,
+            vrot: (Math.random() - 0.5) * 10,
+            color: colors[i % colors.length],
+            life: 140 + Math.random() * 60
+          });
+        }
+      }
+
+      function animateConfetti() {
+        if (confettiPieces.length > 0) {
+          confCtx.clearRect(0, 0, confCanvas.width, confCanvas.height);
+          for (let i = confettiPieces.length - 1; i >= 0; i--) {
+            const p = confettiPieces[i];
+            p.x += p.vx; p.y += p.vy; p.rot += p.vrot; p.life--;
+            confCtx.save();
+            confCtx.translate(p.x, p.y);
+            confCtx.rotate((p.rot * Math.PI) / 180);
+            confCtx.fillStyle = p.color;
+            confCtx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+            confCtx.restore();
+            if (p.life <= 0 || p.y > confCanvas.height + 20) confettiPieces.splice(i, 1);
+          }
+          if (confettiPieces.length === 0) confCtx.clearRect(0, 0, confCanvas.width, confCanvas.height);
+        }
+        requestAnimationFrame(animateConfetti);
+      }
+
+      const fxCanvas = document.getElementById('fx-canvas');
+      const fxCtx = fxCanvas.getContext('2d');
+      let fxBeams = [];
+      let fxParticles = [];
+
+      function resizeFxCanvas() {
+        const arena = document.getElementById('battle-arena');
+        if (!arena) return;
+        const rect = arena.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          fxCanvas.width = rect.width;
+          fxCanvas.height = rect.height;
+        }
+      }
+
+      function fireLaserAnimation(isCrit) {
+        resizeFxCanvas();
+        const arena = document.getElementById('battle-arena').getBoundingClientRect();
+        const shipRect = document.getElementById('player-ship-battle-slot').getBoundingClientRect();
+        const bossRect = document.getElementById('boss-svg-slot').getBoundingClientRect();
+
+        const x1 = shipRect.left + shipRect.width / 2 - arena.left;
+        const y1 = shipRect.top + 8 - arena.top;
+        const x2 = bossRect.left + bossRect.width / 2 - arena.left;
+        const y2 = bossRect.top + bossRect.height / 2 - arena.top;
+
+        const laserObj = getLaserObj(state.equippedLaser);
+
+        fxBeams.push({ x1, y1, x2, y2, life: 16, maxLife: 16, width: isCrit ? 11 : 6, color: laserObj.color, core: laserObj.core });
+
+        const pCount = isCrit ? 30 : 18;
+        for (let i = 0; i < pCount; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = Math.random() * (isCrit ? 6.5 : 4.2) + 1.4;
+          fxParticles.push({
+            x: x2, y: y2,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            r: Math.random() * 3.5 + 1.5,
+            color: i % 3 === 0 ? '#ffffff' : laserObj.color,
+            life: 24 + Math.random() * 14,
+            maxLife: 38
+          });
+        }
+      }
+
+      function animateFx() {
+        if (fxBeams.length > 0 || fxParticles.length > 0) {
+          fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+
+          for (let i = fxBeams.length - 1; i >= 0; i--) {
+            const b = fxBeams[i];
+            const alpha = b.life / b.maxLife;
+            fxCtx.save();
+            fxCtx.globalAlpha = alpha;
+            fxCtx.lineCap = 'round';
+            fxCtx.strokeStyle = b.color;
+            fxCtx.shadowBlur = 20;
+            fxCtx.shadowColor = b.color;
+            fxCtx.lineWidth = b.width;
+            fxCtx.beginPath();
+            fxCtx.moveTo(b.x1, b.y1);
+            fxCtx.lineTo(b.x2, b.y2);
+            fxCtx.stroke();
+
+            fxCtx.strokeStyle = b.core;
+            fxCtx.lineWidth = Math.max(2, b.width * 0.42);
+            fxCtx.beginPath();
+            fxCtx.moveTo(b.x1, b.y1);
+            fxCtx.lineTo(b.x2, b.y2);
+            fxCtx.stroke();
+
+            fxCtx.fillStyle = '#ffffff';
+            fxCtx.beginPath();
+            fxCtx.arc(b.x2, b.y2, b.width * 1.9 * alpha, 0, Math.PI * 2);
+            fxCtx.fill();
+            fxCtx.restore();
+            b.life--;
+            if (b.life <= 0) fxBeams.splice(i, 1);
+          }
+
+          for (let i = fxParticles.length - 1; i >= 0; i--) {
+            const p = fxParticles[i];
+            p.x += p.vx; p.y += p.vy; p.vx *= 0.94; p.vy *= 0.94; p.life--;
+            fxCtx.save();
+            fxCtx.globalAlpha = Math.max(0, p.life / p.maxLife);
+            fxCtx.fillStyle = p.color;
+            fxCtx.shadowBlur = 8;
+            fxCtx.shadowColor = p.color;
+            fxCtx.beginPath();
+            fxCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            fxCtx.fill();
+            fxCtx.restore();
+            if (p.life <= 0) fxParticles.splice(i, 1);
+          }
+
+          if (fxBeams.length === 0 && fxParticles.length === 0) fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+        }
+        requestAnimationFrame(animateFx);
+      }
+
+      /* =====================================================================
+         9. ناوبری و رندر صفحات اصلی (ورود، اتاق فرمان ۲×۲، نقشه رنگی، باشگاه تقویت)
+         ===================================================================== */
+      const VIEW_IDS = [
+        'login', 'home', 'story-map', 'gym', 'battle', 'result',
+        'duel-setup', 'duel-play', 'duel-winner', 'exam', 'exam-report'
+      ];
+      let currentView = 'login';
+
+      function setPhase2Tint(active) {
+        bgPhase2 = active;
+        document.getElementById('phase2-tint').classList.toggle('active', active);
+        const arena = document.getElementById('battle-arena');
+        if (arena) arena.classList.toggle('phase2-border', active);
+      }
+
+      function exitForcedDuelLandscape() {
+        document.getElementById('view-duel-play').classList.remove('force-landscape');
+        try {
+          if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock();
+        } catch (e) {}
+      }
+
+      function showView(name) {
+        if (currentView === 'duel-play' && name !== 'duel-play') exitForcedDuelLandscape();
+        currentView = name;
+        setPhase2Tint(false);
+        const shell = document.getElementById('app');
+        shell.classList.toggle('wide-mode', name === 'duel-play');
+
+        VIEW_IDS.forEach((v) => {
+          document.getElementById(`view-${v}`).classList.toggle('hidden', v !== name);
+        });
+
+        if (name === 'login') renderLogin();
+        if (name === 'home') renderHome();
+        if (name === 'story-map') renderStoryMap();
+        if (name === 'gym') renderGymView();
+      }
+
+      function updateMuteUI() {
+        const icon = SFX.muted ? '🔇' : '🔊';
+        document.getElementById('btn-mute-global').textContent = icon;
+        document.getElementById('btn-mute-battle').textContent = icon;
+      }
+
+      function toggleMute() {
+        SFX.muted = !SFX.muted;
+        state.muted = SFX.muted;
+        saveState();
+        updateMuteUI();
+        showToast(SFX.muted ? 'صدا قطع شد 🔇' : 'صدا وصل شد 🔊', 1400);
+      }
+
+      function getShipObj(id) { return SHIPS.find((s) => s.id === id) || SHIPS[0]; }
+      function getLaserObj(id) { return LASERS.find((l) => l.id === id) || LASERS[0]; }
+      function getAvatarObj(id) { return AVATARS.find((a) => a.id === id) || AVATARS[0]; }
+
+      function renderLogin() {
+        document.getElementById('login-ship-preview').innerHTML = getShipObj(state.equippedShip).svg;
+        const picker = document.getElementById('login-avatar-picker');
+        picker.innerHTML = '';
+        AVATARS.forEach((av) => {
+          const unlocked = av.price === 0 || state.ownedAvatars.includes(av.id);
+          const selected = state.equippedAvatar === av.id;
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = `relative h-12 rounded-xl border-2 flex items-center justify-center text-2xl bg-gradient-to-br ${av.bg} transition ${
+            selected ? 'border-cyan-400 scale-105 shadow-lg shadow-cyan-500/25' : unlocked ? 'border-slate-700' : 'border-slate-800 opacity-50'
+          }`;
+          btn.innerHTML = `${av.emoji}${!unlocked ? '<span class="absolute -top-1 -right-1 text-[10px]">🔒</span>' : ''}`;
+          btn.addEventListener('click', () => {
+            if (!unlocked) {
+              SFX.shieldHit();
+              showToast('این آواتار رو بعداً با سکه از فروشگاه می‌خری! 🛒');
+              return;
+            }
+            SFX.click();
+            state.equippedAvatar = av.id;
+            renderLogin();
+          });
+          picker.appendChild(btn);
+        });
+      }
+
+      function renderHome() {
+        const av = getAvatarObj(state.equippedAvatar);
+        const ship = getShipObj(state.equippedShip);
+        const laser = getLaserObj(state.equippedLaser);
+
+        document.getElementById('top-avatar-slot').textContent = av.emoji;
+        document.getElementById('top-player-name').textContent = state.name || 'فرمانده';
+        document.getElementById('top-level-badge').textContent = `سطح ${toFa(state.level)}`;
+
+        const needed = xpNeededForLevel(state.level);
+        const pct = Math.min(100, Math.max(6, Math.round((state.xp / needed) * 100)));
+        document.getElementById('top-xp-label').textContent = `${toFa(state.xp)} / ${toFa(needed)} XP`;
+        document.getElementById('top-xp-bar').style.width = `${pct}%`;
+
+        document.getElementById('top-coins-count').textContent = toFa(state.coins);
+        document.getElementById('shop-banner-coins').textContent = toFa(state.coins);
+
+        document.getElementById('home-ship-slot').innerHTML = ship.svg;
+        document.getElementById('home-loadout-label').textContent = `${ship.name} • ${laser.name}`;
+        document.getElementById('home-shop-affordable').classList.toggle('hidden', !canAffordAnyUnownedItem());
+
+        document.getElementById('home-story-pill').textContent = `${toFa(state.completedStages.length)} از ۱۰ فتح شده`;
+
+        const { red } = getMasteryBuckets();
+        const gymPill = document.getElementById('home-gym-pill');
+        if (red.length > 0) {
+          gymPill.textContent = `${toFa(red.length)} اشتباه برای تمرین 🔴`;
+          gymPill.className = 'mt-1 px-2.5 py-0.5 rounded-full bg-rose-500/25 border border-rose-400/60 text-[10px] font-black text-rose-200';
+        } else {
+          gymPill.textContent = 'بدون اشتباه! عالی 🌟';
+          gymPill.className = 'mt-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-[10px] font-black text-emerald-200';
+        }
+
+        updateMuteUI();
+      }
+
+      /* نقشه ۱۰ مرحله‌ای با تفکیک رنگی دقیق: سبز (انجام شده) / قرمز (آماده نبرد) / سیاه (قفل) */
+      function renderStoryMap() {
+        const list = document.getElementById('story-stages-list');
+        list.innerHTML = '';
+        const highestDone = state.completedStages.length > 0 ? Math.max(...state.completedStages) : 0;
+
+        STORY_STAGES.forEach((st) => {
+          const isCompleted = state.completedStages.includes(st.id);
+          const isUnlocked = st.id === 1 || state.completedStages.includes(st.id - 1) || st.id <= highestDone + 1;
+
+          const card = document.createElement('button');
+          let cardStyle = '';
+          let statusBadge = '';
+
+          if (isCompleted) {
+            cardStyle = 'bg-gradient-to-l from-emerald-950/90 to-emerald-900/75 border-2 border-emerald-400/80 shadow-lg shadow-emerald-500/15';
+            statusBadge = '<span class="px-2.5 py-1 rounded-xl bg-emerald-500/25 border border-emerald-300/60 text-emerald-200 text-[11px] font-black shrink-0">✅ فتح شده</span>';
+          } else if (isUnlocked) {
+            cardStyle = 'bg-gradient-to-l from-red-950/95 to-rose-900/80 border-2 border-red-400/90 stage-active-pulse';
+            statusBadge = '<span class="px-2.5 py-1 rounded-xl bg-red-500/35 border border-red-300/75 text-red-100 text-[11px] font-black shrink-0">⚔️ آماده نبرد</span>';
+          } else {
+            cardStyle = 'bg-slate-950/95 border border-slate-800 opacity-65';
+            statusBadge = '<span class="px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-700 text-slate-400 text-[11px] font-extrabold shrink-0">🔒 قفل</span>';
+          }
+
+          card.className = `game-btn w-full text-right rounded-2xl p-3 flex items-center justify-between gap-2.5 ${cardStyle}`;
+          card.innerHTML = `
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-11 h-11 rounded-2xl bg-black/40 border border-white/10 flex items-center justify-center text-2xl shrink-0">
+                ${isUnlocked || isCompleted ? st.bossEmoji : '🔒'}
+              </div>
+              <div class="min-w-0">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-xs font-black ${isCompleted ? 'text-emerald-300' : isUnlocked ? 'text-red-200' : 'text-slate-500'}">مرحله ${toFa(st.id)}</span>
+                  <span class="text-sm font-black ${isUnlocked || isCompleted ? 'text-white' : 'text-slate-400'} truncate">${st.bossName}</span>
+                </div>
+                <span class="inline-block mt-1 px-2 py-0.5 rounded-lg text-[10px] font-extrabold ${
+                  isCompleted ? 'bg-emerald-500/20 text-emerald-200' : isUnlocked ? 'bg-red-500/25 text-red-100' : 'bg-slate-900 text-slate-500'
+                }">${st.topic}</span>
+              </div>
+            </div>
+            ${statusBadge}
+          `;
+
+          card.addEventListener('click', () => {
+            if (!isUnlocked && !isCompleted) {
+              SFX.shieldHit();
+              showToast(`اول مرحله ${toFa(st.id - 1)} رو فتح کن تا این مرحله باز بشه! 🔒`);
+              return;
+            }
+            SFX.click();
+            startStoryBattle(st);
+          });
+
+          list.appendChild(card);
+        });
+      }
+
+      /* رندر باشگاه تقویت ضرب (کاملاً شفاف و بدون باگ) */
+      function renderGymView() {
+        const { red, yellow, green } = getMasteryBuckets();
+        document.getElementById('gym-count-1').textContent = toFa(red.length);
+        document.getElementById('gym-count-2').textContent = toFa(yellow.length);
+        document.getElementById('gym-count-3').textContent = toFa(green.length);
+
+        const mainCard = document.getElementById('gym-main-card');
+        if (red.length > 0) {
+          const chips = red.map((k) => {
+            const q = keyToQ(k);
+            return `<span class="px-2.5 py-1 rounded-xl bg-rose-500/20 border border-rose-400/50 text-rose-100 text-xs font-black">${eqChipHtml(q.a, q.opChar, q.b)}</span>`;
+          }).join('');
+
+          mainCard.innerHTML = `
+            <div class="text-xs font-black text-rose-300">🎯 اشتباهات ثبت‌شده برای تمرین (${toFa(red.length)} مورد):</div>
+            <div class="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">${chips}</div>
+            <button id="btn-gym-red-start" class="game-btn w-full py-3.5 rounded-2xl bg-gradient-to-l from-rose-500 to-orange-500 text-white font-black text-sm shadow-lg shadow-rose-500/25">
+              تمرین اشتباهات من (${toFa(red.length)} مورد) 🎯
+            </button>
+          `;
+          document.getElementById('btn-gym-red-start').addEventListener('click', () => {
+            SFX.click();
+            startGymSession('red', red.map(keyToQ).filter(Boolean));
+          });
+        } else {
+          mainCard.innerHTML = `
+            <div class="text-center py-2 space-y-2">
+              <div class="text-4xl">🎉</div>
+              <div class="text-sm font-black text-emerald-300">آفرین! هیچ اشتباهی برای تمرین نداری 🎉</div>
+              <p class="text-xs text-slate-300 leading-relaxed">
+                بیا یه آزمونک هوشمند ۱۰ تایی از ضرب‌های مهم (۳ تا ۹) بزنیم تا هم سرعتت بالا بره هم تعداد سبزها بیشتر بشه!
+              </p>
+              <button id="btn-gym-smart-start" class="game-btn w-full py-3.5 rounded-2xl bg-gradient-to-l from-emerald-500 to-cyan-600 text-white font-black text-sm shadow-lg shadow-emerald-500/25">
+                آزمونک هوشمند ۱۰ تایی 🚀
+              </button>
+            </div>
+          `;
+          document.getElementById('btn-gym-smart-start').addEventListener('click', () => {
+            SFX.click();
+            startSmartDiscoveryQuiz();
+          });
+        }
+
+        const yellowBtn = document.getElementById('btn-gym-yellow');
+        if (yellow.length > 0) {
+          yellowBtn.classList.remove('hidden');
+          yellowBtn.textContent = `🟡 مرور موارد در حال یادگیری (${toFa(yellow.length)} مورد)`;
+          yellowBtn.onclick = () => {
+            SFX.click();
+            startGymSession('yellow', yellow.map(keyToQ).filter(Boolean));
+          };
+        } else {
+          yellowBtn.classList.add('hidden');
+        }
+
+        // انتخاب جدول ضرب دلخواه ۲ تا ۹
+        const picker = document.getElementById('gym-table-picker');
+        picker.innerHTML = '';
+        for (let n = 2; n <= 9; n++) {
+          const btn = document.createElement('button');
+          btn.className = 'game-btn py-2 rounded-xl bg-slate-900/90 border border-slate-700 hover:border-cyan-400 text-xs font-black text-cyan-200';
+          btn.textContent = `جدول ${toFa(n)}`;
+          btn.addEventListener('click', () => {
+            SFX.click();
+            const deck = shuffle(buildMulDeck([n], 2, 10));
+            startGymSession(`جدول ${toFa(n)}`, deck);
+          });
+          picker.appendChild(btn);
+        }
+      }
+
+      /* =====================================================================
+         10. فروشگاه تجهیزات (سفینه‌ها، رنگ لیزر، آواتارها)
+         ===================================================================== */
+      let activeShopTab = 'ships';
+
+      function openShop(tab = 'ships') {
+        activeShopTab = tab;
+        SFX.click();
+        document.getElementById('modal-shop').classList.remove('hidden');
+        renderShop();
+      }
+
+      function refreshShopAwareUI() {
+        if (currentView === 'home') renderHome();
+        if (currentView === 'result') {
+          document.getElementById('result-avatar-slot').textContent = getAvatarObj(state.equippedAvatar).emoji;
+          document.getElementById('res-shop-affordable').classList.toggle('hidden', !canAffordAnyUnownedItem());
+        }
+      }
+
+      function renderShop() {
+        document.getElementById('shop-coins-label').textContent = `${toFa(state.coins)} 🪙`;
+
+        document.querySelectorAll('.shop-tab-btn').forEach((btn) => {
+          const isAct = btn.dataset.shopTab === activeShopTab;
+          btn.className = isAct
+            ? 'shop-tab-btn game-btn py-2 rounded-xl text-xs font-black bg-cyan-500/25 border border-cyan-400 text-cyan-200'
+            : 'shop-tab-btn game-btn py-2 rounded-xl text-xs font-bold bg-slate-900 border border-slate-700 text-slate-400';
+        });
+
+        const grid = document.getElementById('shop-items-grid');
+        grid.innerHTML = '';
+
+        const list = activeShopTab === 'ships' ? SHIPS : activeShopTab === 'lasers' ? LASERS : AVATARS;
+        const ownedArr = activeShopTab === 'ships' ? state.ownedShips : activeShopTab === 'lasers' ? state.ownedLasers : state.ownedAvatars;
+        const equippedId = activeShopTab === 'ships' ? state.equippedShip : activeShopTab === 'lasers' ? state.equippedLaser : state.equippedAvatar;
+
+        list.forEach((item) => {
+          const owned = item.price === 0 || ownedArr.includes(item.id);
+          const equipped = equippedId === item.id;
+
+          let previewHtml = '';
+          if (activeShopTab === 'lasers') {
+            previewHtml = `<div class="h-14 flex items-center justify-center"><div class="w-24 h-3 rounded-full" style="background: ${item.color}; box-shadow: 0 0 16px ${item.color};"></div></div>`;
+          } else if (activeShopTab === 'avatars') {
+            previewHtml = `<div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br ${item.bg} border border-white/20 flex items-center justify-center text-3xl">${item.emoji}</div>`;
+          } else {
+            previewHtml = `<div class="w-16 h-16 mx-auto">${item.svg}</div>`;
+          }
+
+          const card = document.createElement('div');
+          card.className = `rounded-2xl p-3 text-center flex flex-col justify-between gap-2 border ${
+            equipped ? 'bg-cyan-950/50 border-cyan-400' : 'bg-slate-900/90 border-slate-700'
+          }`;
+          card.innerHTML = `
+            <div>
+              ${previewHtml}
+              <div class="text-xs font-black text-white mt-1.5">${item.name}</div>
+            </div>
+            <button class="game-btn w-full py-2 rounded-xl text-xs font-black ${
+              equipped
+                ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-400/50'
+                : owned
+                ? 'bg-cyan-600 text-white'
+                : state.coins >= item.price
+                ? 'bg-gradient-to-l from-amber-400 to-orange-500 text-slate-950'
+                : 'bg-slate-800 text-slate-400'
+            }">
+              ${equipped ? 'فعال است ✅' : owned ? 'انتخاب کن' : `خرید (${toFa(item.price)} 🪙)`}
+            </button>
+          `;
+
+          card.querySelector('button').addEventListener('click', () => {
+            if (equipped) return;
+            if (owned) {
+              SFX.click();
+              if (activeShopTab === 'ships') state.equippedShip = item.id;
+              else if (activeShopTab === 'lasers') state.equippedLaser = item.id;
+              else state.equippedAvatar = item.id;
+              saveState();
+              renderShop();
+              refreshShopAwareUI();
+              showToast(`${item.name} فعال شد! ✨`, 1600);
+            } else if (state.coins >= item.price) {
+              state.coins -= item.price;
+              ownedArr.push(item.id);
+              if (activeShopTab === 'ships') state.equippedShip = item.id;
+              else if (activeShopTab === 'lasers') state.equippedLaser = item.id;
+              else state.equippedAvatar = item.id;
+              saveState();
+              SFX.victory();
+              launchConfetti(40);
+              renderShop();
+              refreshShopAwareUI();
+              showToast(`🎉 ${item.name} خریداری و فعال شد!`);
+            } else {
+              SFX.shieldHit();
+              showToast(`سکه کافی نداری! ${toFa(item.price - state.coins)} سکه دیگه لازم داری 🪙`);
+            }
+          });
+          grid.appendChild(card);
+        });
+      }
+
+      /* =====================================================================
+         11. موتور نبرد فضایی (نبرد داستانی ۱۰ مرحله‌ای + باشگاه تقویت)
+         ===================================================================== */
+      let battle = null;
+
+      function createDeckBag(stage) {
+        return shuffle([...stage.buildDeck()]);
+      }
+
+      function popFromBag(b) {
+        if (b.deck.length === 0) {
+          b.deck = createDeckBag(b.stage);
+          b.deck.sort((x, y) => (b.recentKeys.includes(x.key) ? 1 : 0) - (b.recentKeys.includes(y.key) ? 1 : 0));
+        }
+        const q = b.deck.shift();
+        b.recentKeys.push(q.key);
+        if (b.recentKeys.length > 3) b.recentKeys.shift();
+        return q;
+      }
+
+      function startStoryBattle(stage) {
+        battle = {
+          mode: 'story',
+          stage,
+          title: `مرحله ${toFa(stage.id)}: ${stage.bossName}`,
+          bossName: stage.bossName,
+          bossSvg: stage.bossSvg,
+          hp: stage.maxHp,
+          maxHp: stage.maxHp,
+          phase2Triggered: false,
+          shields: 3,
+          maxShields: 3,
+          deck: createDeckBag(stage),
+          recentKeys: [],
+          qIndex: 0,
+          totalQ: null,
+          currentQ: null,
+          input: '',
+          combo: 0,
+          correct: 0,
+          attempts: 0,
+          coinsEarned: 0,
+          xpEarned: 0,
+          weakList: [],
+          qStart: Date.now(),
+          locked: false
+        };
+        initBattleScreen();
+        nextBattleQuestion();
+      }
+
+      function startGymSession(label, questions) {
+        const pool = shuffle([...questions]).slice(0, 12);
+        battle = {
+          mode: 'gym',
+          gymLabel: label,
+          title: label === 'red' ? 'تمرین اشتباهات من 🎯' : label === 'yellow' ? 'مرور در حال یادگیری 🟡' : `تمرین ${label}`,
+          bossName: 'هدف باشگاه تقویت',
+          bossSvg: 'gym',
+          hp: 100,
+          maxHp: 100,
+          phase2Triggered: false,
+          shields: 3,
+          maxShields: 3,
+          qIndex: 0,
+          totalQ: pool.length,
+          queue: pool,
+          currentQ: null,
+          input: '',
+          combo: 0,
+          correct: 0,
+          attempts: 0,
+          coinsEarned: 0,
+          xpEarned: 0,
+          weakList: [],
+          qStart: Date.now(),
+          locked: false
+        };
+        initBattleScreen();
+        nextBattleQuestion();
+      }
+
+      function startSmartDiscoveryQuiz() {
+        const allCore = shuffle([
+          ...buildMulDeck([3, 4, 5, 6, 7, 8, 9], 3, 9),
+          ...buildDivDeck([3, 4, 5, 6, 7, 8, 9], 3, 9)
+        ]);
+        // اولویت به مواردی که هنوز سبز نشده‌اند
+        allCore.sort((a, b) => {
+          const ga = state.mastery[a.key] && state.mastery[a.key].box === 3 ? 1 : 0;
+          const gb = state.mastery[b.key] && state.mastery[b.key].box === 3 ? 1 : 0;
+          return ga - gb;
+        });
+        startGymSession('آزمونک هوشمند ۱۰ تایی', allCore.slice(0, 10));
+      }
+
+      function initBattleScreen() {
+        document.getElementById('battle-mini-avatar').textContent = getAvatarObj(state.equippedAvatar).emoji;
+        document.getElementById('battle-title').textContent = battle.title;
+        document.getElementById('boss-name-text').textContent = battle.bossName;
+        document.getElementById('boss-svg-slot').innerHTML = BOSS_SVGS[battle.bossSvg];
+        document.getElementById('boss-svg-slot').className = 'w-20 h-20 sm:w-24 sm:h-24 animate-float';
+        document.getElementById('player-ship-battle-slot').innerHTML = getShipObj(state.equippedShip).svg;
+        document.getElementById('phase2-tag').classList.add('hidden');
+        document.getElementById('phase2-banner').classList.add('hidden');
+        document.getElementById('gym-gentle-reveal').classList.add('hidden');
+        document.getElementById('battle-shields-box').classList.toggle('hidden', battle.mode !== 'story');
+        showView('battle');
+        updateBattleHUD();
+        setTimeout(resizeFxCanvas, 60);
+      }
+
+      function updateBattleHUD() {
+        document.getElementById('battle-coins-earned').textContent = toFa(battle.coinsEarned);
+
+        if (battle.mode === 'story') {
+          document.getElementById('battle-sub').textContent = battle.phase2Triggered ? 'فاز خشم! سکه ۲ برابر 🪙' : battle.stage.topic;
+          const pct = Math.max(0, Math.round((battle.hp / battle.maxHp) * 100));
+          document.getElementById('boss-hp-bar').style.width = `${pct}%`;
+          document.getElementById('boss-hp-label').textContent = `${toFa(Math.max(0, Math.round(battle.hp)))} / ${toFa(battle.maxHp)}`;
+          const full = '🛡️'.repeat(Math.max(0, battle.shields));
+          const empty = '🖤'.repeat(Math.max(0, battle.maxShields - battle.shields));
+          document.getElementById('battle-shields-icons').textContent = full + empty;
+        } else {
+          document.getElementById('battle-sub').textContent = `سوال ${toFa(Math.min(battle.qIndex + 1, battle.totalQ))} از ${toFa(battle.totalQ)}`;
+          const pct = Math.round((battle.qIndex / battle.totalQ) * 100);
+          document.getElementById('boss-hp-bar').style.width = `${100 - pct}%`;
+          document.getElementById('boss-hp-label').textContent = `${toFa(pct)}٪ تکمیل`;
+        }
+
+        const comboPill = document.getElementById('battle-combo-pill');
+        if (battle.combo >= 2) {
+          comboPill.textContent = `🔥 ${toFa(battle.combo)}x`;
+          comboPill.classList.remove('hidden');
+        } else {
+          comboPill.classList.add('hidden');
+        }
+      }
+
+      function nextBattleQuestion() {
+        if (battle.mode === 'story') {
+          battle.currentQ = popFromBag(battle);
+        } else {
+          if (battle.qIndex >= battle.totalQ) {
+            finishBattle(true);
+            return;
+          }
+          battle.currentQ = battle.queue[battle.qIndex];
+        }
+        battle.input = '';
+        battle.qStart = Date.now();
+        document.getElementById('battle-q-a').textContent = toFa(battle.currentQ.a);
+        document.getElementById('battle-q-op').textContent = battle.currentQ.opChar;
+        document.getElementById('battle-q-b').textContent = toFa(battle.currentQ.b);
+        updateBattleAnswerBox();
+        updateBattleHUD();
+      }
+
+      function updateBattleAnswerBox() {
+        document.getElementById('battle-answer-box').textContent = battle.input ? toFa(battle.input) : '؟';
+      }
+
+      function spawnBattlePopup(text, colorCls, topPct = 36) {
+        const wrap = document.getElementById('battle-popups');
+        const el = document.createElement('div');
+        el.className = `float-popup px-3 py-1 rounded-full bg-slate-950/92 border text-xs font-black shadow-xl ${colorCls}`;
+        el.style.top = `${topPct}%`;
+        el.textContent = text;
+        wrap.appendChild(el);
+        setTimeout(() => el.remove(), 1200);
+      }
+
+      function triggerBossPhase2() {
+        battle.phase2Triggered = true;
+        setPhase2Tint(true);
+        SFX.bossAlarm();
+        document.getElementById('phase2-tag').classList.remove('hidden');
+
+        const bossEl = document.getElementById('boss-svg-slot');
+        bossEl.classList.remove('animate-float');
+        bossEl.classList.add('boss-rage');
+
+        const banner = document.getElementById('phase2-banner');
+        banner.classList.remove('hidden', 'phase-banner-anim');
+        void banner.offsetWidth;
+        banner.classList.add('phase-banner-anim');
+        setTimeout(() => banner.classList.add('hidden'), 2550);
+      }
+
+      function submitBattleAnswer() {
+        if (!battle || battle.locked) return;
+        if (!battle.input) {
+          const box = document.getElementById('battle-answer-box');
+          box.classList.remove('shake-hit');
+          void box.offsetWidth;
+          box.classList.add('shake-hit');
+          return;
+        }
+
+        const q = battle.currentQ;
+        const userAns = Number(battle.input);
+        const sec = (Date.now() - battle.qStart) / 1000;
+        const isCorrect = userAns === q.answer;
+        const isFast = sec < 5;
+
+        battle.attempts++;
+        recordMastery(q.key, isCorrect, sec, battle.mode);
+
+        if (isCorrect) {
+          battle.correct++;
+          battle.combo++;
+
+          SFX.laser();
+          if (isFast) setTimeout(() => SFX.critical(), 90);
+          fireLaserAnimation(isFast);
+
+          const shipEl = document.getElementById('player-ship-battle-slot');
+          shipEl.classList.remove('ship-recoil');
+          void shipEl.offsetWidth;
+          shipEl.classList.add('ship-recoil');
+
+          const bossEl = document.getElementById('boss-svg-slot');
+          bossEl.classList.remove('boss-hit');
+          void bossEl.offsetWidth;
+          bossEl.classList.add('boss-hit');
+
+          const dmg = isFast ? (battle.combo >= 2 ? 20 : 15) : 10;
+          const coinMult = (battle.mode === 'story' && battle.phase2Triggered) ? 2 : 1;
+          const baseCoin = isFast ? (battle.combo >= 2 ? 12 : 9) : 6;
+          const coinGain = baseCoin * coinMult;
+          const xpGain = isFast ? 15 : 10;
+
+          battle.coinsEarned += coinGain;
+          battle.xpEarned += xpGain;
+          setTimeout(() => SFX.coin(), 170);
+
+          const praise = isFast
+            ? ENCOURAGE_CRIT[randInt(0, ENCOURAGE_CRIT.length - 1)]
+            : ENCOURAGE_NORMAL[randInt(0, ENCOURAGE_NORMAL.length - 1)];
+
+          if (battle.mode === 'story') {
+            battle.hp = Math.max(0, battle.hp - dmg);
+            spawnBattlePopup(`${praise} (-${toFa(dmg)})`, isFast ? 'border-amber-400 text-amber-300' : 'border-cyan-400 text-cyan-200', 24);
+            spawnBattlePopup(`+${toFa(coinGain)} 🪙  +${toFa(xpGain)} XP`, 'border-emerald-400 text-emerald-300', 58);
+
+            if (!battle.phase2Triggered && battle.hp > 0 && battle.hp <= battle.maxHp * 0.5) {
+              triggerBossPhase2();
+            }
+
+            if (battle.hp <= 0) {
+              SFX.explosion();
+              updateBattleHUD();
+              battle.locked = true;
+              setTimeout(() => finishBattle(true), 520);
+              return;
+            }
+          } else {
+            spawnBattlePopup(praise, 'border-emerald-400 text-emerald-300', 30);
+            spawnBattlePopup(`+${toFa(coinGain)} 🪙`, 'border-amber-400 text-amber-300', 58);
+            battle.qIndex++;
+          }
+
+          nextBattleQuestion();
+        } else {
+          battle.combo = 0;
+          if (!battle.weakList.some((w) => w.key === q.key)) battle.weakList.push(q);
+
+          SFX.shieldHit();
+          const arena = document.getElementById('battle-arena');
+          arena.classList.remove('shake-hit', 'shield-damage');
+          void arena.offsetWidth;
+          arena.classList.add('shake-hit', 'shield-damage');
+
+          const missMsg = ENCOURAGE_MISS[randInt(0, ENCOURAGE_MISS.length - 1)];
+
+          if (battle.mode === 'gym') {
+            battle.locked = true;
+            const rev = document.getElementById('gym-gentle-reveal');
+            rev.innerHTML = `اشکالی نداره! یاد بگیر: <span class="mx-1 font-black">${eqChipHtml(q.a, q.opChar, q.b, q.answer)}</span>`;
+            rev.classList.remove('hidden');
+            spawnBattlePopup('ثبت در نیاز به تمرین 🔴', 'border-rose-500 text-rose-300', 36);
+            setTimeout(() => {
+              rev.classList.add('hidden');
+              battle.locked = false;
+              battle.qIndex++;
+              nextBattleQuestion();
+            }, 1850);
+          } else {
+            battle.shields = Math.max(0, battle.shields - 1);
+            updateBattleHUD();
+            spawnBattlePopup(`${missMsg} (جواب: ${toFa(q.answer)})`, 'border-rose-500 text-rose-300', 40);
+            if (battle.shields <= 0) {
+              battle.locked = true;
+              setTimeout(() => finishBattle(false), 600);
+              return;
+            }
+            nextBattleQuestion();
+          }
+        }
+      }
+
+      function finishBattle(won) {
+        setPhase2Tint(false);
+        const acc = battle.attempts > 0 ? Math.round((battle.correct / battle.attempts) * 100) : 100;
+
+        let bonusCoins = 0;
+        let bonusXp = 0;
+        if (battle.mode === 'story' && won) {
+          bonusCoins = battle.stage.rewardCoins;
+          bonusXp = 35;
+          if (!state.completedStages.includes(battle.stage.id)) {
+            state.completedStages.push(battle.stage.id);
+          }
+        }
+
+        const totalCoins = battle.coinsEarned + bonusCoins;
+        const totalXp = battle.xpEarned + bonusXp;
+        const leveledUp = addRewards(totalCoins, totalXp);
+
+        if (won) {
+          if (leveledUp) SFX.levelUp(); else SFX.victory();
+          launchConfetti(leveledUp ? 110 : 65);
+        } else {
+          SFX.defeat();
+        }
+
+        document.getElementById('result-avatar-slot').textContent = getAvatarObj(state.equippedAvatar).emoji;
+        document.getElementById('result-emoji').textContent = won ? (acc >= 85 ? '🏆' : '🚀') : '🛡️';
+        document.getElementById('result-stars').textContent = !won ? '☆☆☆' : acc >= 90 ? '⭐⭐⭐' : acc >= 70 ? '⭐⭐☆' : '⭐☆☆';
+
+        if (battle.mode === 'story') {
+          document.getElementById('result-heading').textContent = won ? `مرحله ${toFa(battle.stage.id)} فتح شد!` : 'سپر سفینه تمام شد!';
+          document.getElementById('result-subtext').textContent = won
+            ? `آفرین ${state.name}! ${battle.stage.bossName} شکست خورد!`
+            : `نگران نباش ${state.name}! دوباره تلاش کن یا سفینه‌ات رو ارتقا بده!`;
+        } else {
+          document.getElementById('result-heading').textContent = 'تمرین عالی در باشگاه!';
+          document.getElementById('result-subtext').textContent = `آفرین ${state.name}! با دقت ${toFa(acc)} درصد پیش رفتی.`;
+        }
+
+        document.getElementById('res-acc').textContent = `${toFa(acc)}٪`;
+        document.getElementById('res-coins').textContent = `+${toFa(totalCoins)} 🪙`;
+        document.getElementById('res-xp').textContent = `+${toFa(totalXp)}`;
+
+        const lvlBanner = document.getElementById('res-levelup-banner');
+        if (leveledUp) {
+          lvlBanner.classList.remove('hidden');
+          document.getElementById('res-levelup-text').textContent = `الان به سطح ${toFa(state.level)} رسیدی!`;
+        } else {
+          lvlBanner.classList.add('hidden');
+        }
+
+        const weakBox = document.getElementById('res-weak-box');
+        if (battle.weakList.length > 0) {
+          weakBox.classList.remove('hidden');
+          document.getElementById('res-weak-list').innerHTML = battle.weakList.map((w) =>
+            `<span class="px-2.5 py-1 rounded-lg bg-rose-500/20 border border-rose-500/40 text-rose-200 text-xs font-bold">${eqChipHtml(w.a, w.opChar, w.b, w.answer)}</span>`
+          ).join('');
+        } else {
+          weakBox.classList.add('hidden');
+        }
+
+        const nextBtn = document.getElementById('btn-res-next');
+        const hasNextStage = battle.mode === 'story' && won && battle.stage.id < STORY_STAGES.length;
+        nextBtn.classList.toggle('hidden', !hasNextStage);
+        if (hasNextStage) {
+          const nextStage = STORY_STAGES[battle.stage.id];
+          nextBtn.textContent = `مرحله بعد: ${nextStage.bossName} ➡️`;
+        }
+
+        document.getElementById('res-shop-affordable').classList.toggle('hidden', !canAffordAnyUnownedItem());
+        document.getElementById('btn-res-map').textContent = battle.mode === 'story' ? 'نقشه مراحل 🗺️' : 'باشگاه تقویت 💪';
+
+        showView('result');
+      }
+
+      /* =====================================================================
+         12. دوئل دو نفره (روبه‌رو + چرخش افقی موبایل + طناب‌کشی انرژی)
+         ===================================================================== */
+      let duelCfg = { diff: 'medium' };
+      let duel = null;
+
+      function startDuelGame() {
+        const p1 = document.getElementById('duel-p1-name').value.trim() || 'بازیکن ۱';
+        const p2 = document.getElementById('duel-p2-name').value.trim() || 'بازیکن ۲';
+        duel = {
+          p1, p2,
+          s1: 0, s2: 0,
+          round: 0,
+          maxRounds: 10,
+          winLead: 5, // اختلاف ۵ امتیاز = پیروزی فوری (۱۰۰٪ نوار طناب‌کشی)
+          diff: duelCfg.diff,
+          lock1: false, lock2: false,
+          currentQ: null,
+          options: []
+        };
+
+        document.getElementById('duel-label-p1').textContent = p1;
+        document.getElementById('duel-label-p2').textContent = p2;
+        showView('duel-play');
+        nextDuelRound();
+      }
+
+      function generateDuelQuestion() {
+        let q;
+        if (duel.diff === 'easy') {
+          const a = [2, 3, 4, 5, 10][randInt(0, 4)];
+          q = makeMul(a, randInt(2, 9));
+        } else if (duel.diff === 'medium') {
+          if (Math.random() < 0.65) {
+            q = makeMul(randInt(3, 9), randInt(2, 9));
+          } else {
+            const d = randInt(2, 7), ans = randInt(2, 9);
+            q = makeDiv(d * ans, d);
+          }
+        } else {
+          if (Math.random() < 0.5) {
+            q = makeMul(randInt(6, 9), randInt(4, 9));
+          } else {
+            const d = randInt(5, 9), ans = randInt(4, 9);
+            q = makeDiv(d * ans, d);
+          }
+        }
+
+        const set = new Set([q.answer]);
+        let safety = 0;
+        while (set.size < 4 && safety < 50) {
+          safety++;
+          const delta = randInt(-8, 8);
+          const cand = q.answer + (delta === 0 ? 2 : delta);
+          if (cand > 0 && cand <= 100) set.add(cand);
+        }
+        return { q, options: shuffle([...set]) };
+      }
+
+      function nextDuelRound() {
+        duel.round++;
+        const { q, options } = generateDuelQuestion();
+        duel.currentQ = q;
+        duel.options = options;
+
+        document.getElementById('duel-score-p1').textContent = toFa(duel.s1);
+        document.getElementById('duel-score-p2').textContent = toFa(duel.s2);
+        document.getElementById('duel-round-label').textContent =
+          duel.round <= duel.maxRounds ? `راند ${toFa(duel.round)} از ${toFa(duel.maxRounds)}` : 'راند طلایی ⚡';
+
+        const diff = duel.s1 - duel.s2;
+        const pct = Math.max(6, Math.min(94, 50 + (diff / duel.winLead) * 44));
+        document.getElementById('duel-bar-p1').style.width = `${pct}%`;
+        document.getElementById('duel-clash-spark').style.left = `calc(${pct}% - 8px)`;
+
+        const eqHtml = `<span>${toFa(q.a)}</span><span class="text-amber-300">${q.opChar}</span><span>${toFa(q.b)}</span><span class="text-cyan-400">=</span><span>؟</span>`;
+        document.getElementById('duel-q-p1').innerHTML = eqHtml;
+        document.getElementById('duel-q-p2').innerHTML = eqHtml;
+
+        renderDuelButtons(1);
+        renderDuelButtons(2);
+      }
+
+      function renderDuelButtons(playerNum) {
+        const container = document.getElementById(`duel-opts-p${playerNum}`);
+        container.innerHTML = '';
+        const isLocked = playerNum === 1 ? duel.lock1 : duel.lock2;
+        const colorCls = playerNum === 1
+          ? 'bg-cyan-600/35 border-cyan-400/75 hover:bg-cyan-500/45 text-white'
+          : 'bg-rose-600/35 border-rose-400/75 hover:bg-rose-500/45 text-white';
+
+        duel.options.forEach((opt) => {
+          const btn = document.createElement('button');
+          btn.disabled = isLocked;
+          btn.className = `duel-opt-btn py-3.5 sm:py-4 rounded-2xl border-2 font-black text-2xl sm:text-3xl ${colorCls} ${isLocked ? 'duel-locked' : ''}`;
+          btn.textContent = toFa(opt);
+          btn.addEventListener('click', () => handleDuelTap(playerNum, opt));
+          container.appendChild(btn);
+        });
+      }
+
+      function handleDuelTap(playerNum, val) {
+        if (!duel) return;
+        if ((playerNum === 1 && duel.lock1) || (playerNum === 2 && duel.lock2)) return;
+
+        if (val === duel.currentQ.answer) {
+          SFX.critical();
+          if (playerNum === 1) duel.s1++; else duel.s2++;
+          document.getElementById(`duel-status-p${playerNum}`).textContent = 'امتیاز! ⚡';
+
+          const leadReached = Math.abs(duel.s1 - duel.s2) >= duel.winLead;
+          const roundsDone = duel.round >= duel.maxRounds && duel.s1 !== duel.s2;
+
+          if (leadReached || roundsDone) {
+            const winner = duel.s1 > duel.s2 ? duel.p1 : duel.p2;
+            SFX.victory();
+            launchConfetti(95);
+            document.getElementById('duel-winner-name').textContent = `${winner} برنده شد!`;
+            document.getElementById('duel-final-score').textContent =
+              `${duel.p1}: ${toFa(duel.s1)}  —  ${duel.p2}: ${toFa(duel.s2)}`;
+            showView('duel-winner');
+            return;
+          }
+
+          duel.lock1 = false;
+          duel.lock2 = false;
+          nextDuelRound();
+        } else {
+          SFX.shieldHit();
+          const panel = document.getElementById(`duel-panel-p${playerNum}`);
+          panel.classList.remove('shake-hit');
+          void panel.offsetWidth;
+          panel.classList.add('shake-hit');
+
+          if (playerNum === 1) duel.lock1 = true; else duel.lock2 = true;
+          document.getElementById(`duel-status-p${playerNum}`).textContent = 'قفل شد (۱.۲ث) ❌';
+          renderDuelButtons(playerNum);
+
+          setTimeout(() => {
+            if (!duel) return;
+            if (playerNum === 1) duel.lock1 = false; else duel.lock2 = false;
+            document.getElementById(`duel-status-p${playerNum}`).textContent = 'آماده!';
+            if (currentView === 'duel-play') renderDuelButtons(playerNum);
+          }, 1200);
+        }
+      }
+
+      /* دکمه چرخش افقی هوشمند دوئل (Orientation Lock + فالبک CSS ۹۰ درجه) */
+      async function toggleDuelLandscape() {
+        SFX.click();
+        const duelView = document.getElementById('view-duel-play');
+        const isForced = duelView.classList.contains('force-landscape');
+
+        if (isForced) {
+          duelView.classList.remove('force-landscape');
+          try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (e) {}
+          showToast('حالت روبه‌رو فعال شد 🔄', 1400);
+          return;
+        }
+
+        // ابتدا تلاش برای قفل افقی بومی مرورگر (اگر پشتیبانی شود)
+        let nativeLocked = false;
+        try {
+          if (screen.orientation && screen.orientation.lock) {
+            await screen.orientation.lock('landscape');
+            nativeLocked = true;
+          }
+        } catch (e) {
+          nativeLocked = false;
+        }
+
+        // اگر مرورگر قفل افقی را نپذیرفت یا صفحه هنوز عمودی است، از چرخش CSS ۹۰ درجه استفاده کن
+        if (!nativeLocked && window.innerHeight > window.innerWidth) {
+          duelView.classList.add('force-landscape');
+          showToast('حالت افقی کنار هم فعال شد 🔄', 1500);
+        }
+      }
+
+      /* =====================================================================
+         13. آزمون رسمی ۱۵ سوالی + کارنامه QR و MG4
+         ===================================================================== */
+      let exam = null;
+      let examTimerInterval = null;
+
+      function startOfficialExam() {
+        const questions = [];
+        const used = new Set();
+
+        let safety = 0;
+        while (questions.length < 9 && safety < 300) {
+          safety++;
+          let a, b;
+          if (questions.length === 0) {
+            a = 10; b = randInt(3, 9);
+          } else {
+            a = randInt(3, 9);
+            b = randInt(3, 9);
+          }
+          const q = makeMul(a, b);
+          if (!used.has(q.key)) { used.add(q.key); questions.push(q); }
+        }
+        while (questions.length < 15 && safety < 600) {
+          safety++;
+          const d = randInt(3, 9);
+          const ans = randInt(3, 9);
+          const q = makeDiv(d * ans, d);
+          if (!used.has(q.key)) { used.add(q.key); questions.push(q); }
+        }
+        shuffle(questions);
+
+        exam = {
+          questions,
+          index: 0,
+          input: '',
+          correct: 0,
+          wr: [], // مثل "7×8=54(56)"
+          wrObjs: [],
+          sl: [], // مثل "6×7"
+          startTime: Date.now(),
+          qStart: Date.now()
+        };
+
+        document.getElementById('exam-student-name').textContent = state.name || 'دانش‌آموز';
+        showView('exam');
+        renderExamQuestion();
+
+        clearInterval(examTimerInterval);
+        examTimerInterval = setInterval(() => {
+          if (!exam || currentView !== 'exam') return clearInterval(examTimerInterval);
+          const sec = Math.floor((Date.now() - exam.startTime) / 1000);
+          const m = String(Math.floor(sec / 60)).padStart(2, '0');
+          const s = String(sec % 60).padStart(2, '0');
+          document.getElementById('exam-timer').textContent = toFa(`${m}:${s}`);
+        }, 500);
+      }
+
+      function renderExamQuestion() {
+        const q = exam.questions[exam.index];
+        exam.input = '';
+        exam.qStart = Date.now();
+        document.getElementById('exam-progress-label').textContent = `سوال ${toFa(exam.index + 1)} از ۱۵`;
+        document.getElementById('exam-progress-bar').style.width = `${((exam.index + 1) / 15) * 100}%`;
+        document.getElementById('exam-q-a').textContent = toFa(q.a);
+        document.getElementById('exam-q-op').textContent = q.opChar;
+        document.getElementById('exam-q-b').textContent = toFa(q.b);
+        document.getElementById('exam-answer-box').textContent = '؟';
+      }
+
+      function submitExamAnswer() {
+        if (!exam || !exam.input) return;
+        SFX.click();
+        const q = exam.questions[exam.index];
+        const userAns = Number(exam.input);
+        const sec = (Date.now() - exam.qStart) / 1000;
+        const isCorrect = userAns === q.answer;
+
+        recordMastery(q.key, isCorrect, sec, 'exam');
+
+        if (isCorrect) {
+          exam.correct++;
+          if (sec > 6) exam.sl.push(`${q.a}${q.opChar}${q.b}`);
+        } else {
+          exam.wr.push(`${q.a}${q.opChar}${q.b}=${userAns}(${q.answer})`);
+          exam.wrObjs.push({ q, userAns });
+        }
+
+        exam.index++;
+        if (exam.index >= exam.questions.length) {
+          finishOfficialExam();
+        } else {
+          renderExamQuestion();
+        }
+      }
+
+      function finishOfficialExam() {
+        clearInterval(examTimerInterval);
+        const totalSeconds = Math.max(1, Math.round((Date.now() - exam.startTime) / 1000));
+        const pct = Math.round((exam.correct / 15) * 100);
+        const score20 = Math.round((exam.correct / 15) * 20 * 10) / 10;
+
+        document.getElementById('report-student-title').textContent = `کارنامه ${state.name || 'دانش‌آموز'}`;
+        document.getElementById('report-score').textContent = toFa(score20);
+        document.getElementById('report-percent').textContent = `${toFa(pct)}٪`;
+        document.getElementById('report-time').textContent = `${toFa(totalSeconds)} ث`;
+
+        const wrongBox = document.getElementById('report-wrong-list');
+        if (exam.wrObjs.length === 0) {
+          wrongBox.innerHTML = '<span class="text-emerald-700 font-extrabold">عالی! هیچ اشتباهی نداشتی 🌟</span>';
+        } else {
+          wrongBox.innerHTML = exam.wrObjs.map(({ q }) =>
+            `<span class="px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 font-bold">${eqChipHtml(q.a, q.opChar, q.b)}</span>`
+          ).join('');
+        }
+
+        // ساختار دقیق Payload و رمزنگاری MG4
+        const payload = {
+          v: 2,
+          n: state.name || 'دانش‌آموز',
+          sc: exam.correct,
+          tot: 15,
+          pct,
+          sec: totalSeconds,
+          dt: todayISO(),
+          wr: exam.wr,
+          sl: exam.sl
+        };
+        const code = encodeOfficialReport(payload);
+        document.getElementById('report-code-output').value = code;
+
+        const qrContainer = document.getElementById('report-qrcode');
+        qrContainer.innerHTML = '';
+        try {
+          if (typeof QRCode !== 'undefined') {
+            new QRCode(qrContainer, {
+              text: code,
+              width: 168,
+              height: 168,
+              colorDark: '#0f172a',
+              colorLight: '#ffffff',
+              correctLevel: QRCode.CorrectLevel.M
+            });
+          } else {
+            qrContainer.innerHTML = '<div class="text-xs text-slate-500 p-4 font-bold">حالت آفلاین: از دکمه کپی کد کارنامه استفاده کن 📋</div>';
+          }
+        } catch (e) {
+          qrContainer.innerHTML = '<div class="text-xs text-slate-500 p-4 font-bold">از دکمه کپی کد کارنامه زیر استفاده کن 📋</div>';
+        }
+
+        showView('exam-report');
+      }
+
+      /* =====================================================================
+         14. اتصال تمام رویدادها (کلیک، لمس و کیبورد فیزیکی)
+         ===================================================================== */
+      function bindEvents() {
+        document.getElementById('btn-start-profile').addEventListener('click', () => {
+          const val = document.getElementById('input-player-name').value.trim();
+          if (val.length < 2) {
+            SFX.shieldHit();
+            showToast('لطفاً نام و نام خانوادگی خودت رو بنویس! 👨‍🚀');
+            return;
+          }
+          SFX.victory();
+          state.name = val;
+          saveState();
+          showView('home');
+        });
+
+        document.getElementById('btn-edit-name').addEventListener('click', () => {
+          SFX.click();
+          document.getElementById('input-player-name').value = state.name;
+          showView('login');
+        });
+
+        document.getElementById('btn-mute-global').addEventListener('click', toggleMute);
+        document.getElementById('btn-mute-battle').addEventListener('click', toggleMute);
+
+        // فروشگاه
+        document.getElementById('btn-open-shop').addEventListener('click', () => openShop('ships'));
+        document.getElementById('btn-res-shop').addEventListener('click', () => openShop('ships'));
+        document.getElementById('btn-close-shop').addEventListener('click', () => {
+          SFX.click();
+          document.getElementById('modal-shop').classList.add('hidden');
+          refreshShopAwareUI();
+        });
+        document.querySelectorAll('.shop-tab-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            SFX.click();
+            activeShopTab = btn.dataset.shopTab;
+            renderShop();
+          });
+        });
+
+        // راهنمای مودها (با جلوگیری از باز شدن کارت)
+        document.querySelectorAll('.btn-help').forEach((btn) => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            SFX.click();
+            const info = HELP_CONTENT[btn.dataset.help];
+            if (!info) return;
+            document.getElementById('help-icon').textContent = info.icon;
+            document.getElementById('help-title').textContent = info.title;
+            document.getElementById('help-body').textContent = info.body;
+            document.getElementById('help-reward').textContent = info.reward;
+            document.getElementById('modal-help').classList.remove('hidden');
+          });
+        });
+        document.getElementById('btn-close-help').addEventListener('click', () => {
+          SFX.click();
+          document.getElementById('modal-help').classList.add('hidden');
+        });
+
+        // ۴ کارت مربعی اصلی
+        document.getElementById('card-mode-story').addEventListener('click', () => { SFX.click(); showView('story-map'); });
+        document.getElementById('card-mode-gym').addEventListener('click', () => { SFX.click(); showView('gym'); });
+        document.getElementById('card-mode-duel').addEventListener('click', () => { SFX.click(); showView('duel-setup'); });
+        document.getElementById('card-mode-exam').addEventListener('click', () => { SFX.click(); startOfficialExam(); });
+
+        // دکمه‌های بازگشت
+        document.getElementById('btn-back-story-map').addEventListener('click', () => { SFX.click(); showView('home'); });
+        document.getElementById('btn-back-gym').addEventListener('click', () => { SFX.click(); showView('home'); });
+        document.getElementById('btn-back-duel-setup').addEventListener('click', () => { SFX.click(); showView('home'); });
+        document.getElementById('btn-quit-battle').addEventListener('click', () => {
+          SFX.click();
+          const mode = battle ? battle.mode : 'home';
+          battle = null;
+          showView(mode === 'story' ? 'story-map' : 'gym');
+        });
+        document.getElementById('btn-quit-duel').addEventListener('click', () => { SFX.click(); duel = null; showView('home'); });
+        document.getElementById('btn-duel-rotate').addEventListener('click', toggleDuelLandscape);
+        document.getElementById('btn-quit-exam').addEventListener('click', () => {
+          SFX.click();
+          clearInterval(examTimerInterval);
+          exam = null;
+          showView('home');
+        });
+
+        // صفحه‌کلید نبرد فضایی
+        document.querySelectorAll('#battle-numpad .num-key[data-digit]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            if (!battle || battle.locked || battle.input.length >= 3) return;
+            SFX.click();
+            battle.input += btn.dataset.digit;
+            updateBattleAnswerBox();
+          });
+        });
+        document.getElementById('battle-key-del').addEventListener('click', () => {
+          if (!battle || battle.locked || !battle.input) return;
+          SFX.click();
+          battle.input = battle.input.slice(0, -1);
+          updateBattleAnswerBox();
+        });
+        document.getElementById('battle-key-fire').addEventListener('click', submitBattleAnswer);
+
+        // صفحه پایان مرحله
+        document.getElementById('btn-res-next').addEventListener('click', () => {
+          SFX.click();
+          if (battle && battle.mode === 'story' && battle.stage.id < STORY_STAGES.length) {
+            startStoryBattle(STORY_STAGES[battle.stage.id]);
+          }
+        });
+        document.getElementById('btn-res-retry').addEventListener('click', () => {
+          SFX.click();
+          if (!battle) return showView('home');
+          if (battle.mode === 'story') startStoryBattle(battle.stage);
+          else showView('gym');
+        });
+        document.getElementById('btn-res-map').addEventListener('click', () => {
+          SFX.click();
+          showView(battle && battle.mode === 'story' ? 'story-map' : 'gym');
+        });
+
+        // تنظیمات دوئل
+        document.querySelectorAll('.duel-cfg-diff').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            SFX.click();
+            duelCfg.diff = btn.dataset.diff;
+            document.querySelectorAll('.duel-cfg-diff').forEach((b) => {
+              const act = b.dataset.diff === duelCfg.diff;
+              b.className = act
+                ? 'duel-cfg-diff game-btn py-2.5 rounded-xl border-2 border-purple-400 bg-purple-600/30 text-xs font-black text-white'
+                : 'duel-cfg-diff game-btn py-2.5 rounded-xl border border-slate-700 bg-slate-900 text-xs font-extrabold text-slate-300';
+            });
+          });
+        });
+        document.getElementById('btn-start-duel').addEventListener('click', () => { SFX.click(); startDuelGame(); });
+        document.getElementById('btn-duel-rematch').addEventListener('click', () => { SFX.click(); startDuelGame(); });
+        document.getElementById('btn-duel-home').addEventListener('click', () => { SFX.click(); showView('home'); });
+
+        // صفحه‌کلید آزمون رسمی
+        document.querySelectorAll('#exam-numpad .exam-num-key[data-digit]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            if (!exam || exam.input.length >= 3) return;
+            SFX.click();
+            exam.input += btn.dataset.digit;
+            document.getElementById('exam-answer-box').textContent = toFa(exam.input);
+          });
+        });
+        document.getElementById('exam-key-del').addEventListener('click', () => {
+          if (!exam || !exam.input) return;
+          SFX.click();
+          exam.input = exam.input.slice(0, -1);
+          document.getElementById('exam-answer-box').textContent = exam.input ? toFa(exam.input) : '؟';
+        });
+        document.getElementById('exam-key-submit').addEventListener('click', submitExamAnswer);
+
+        // کارنامه آزمون رسمی (کپی امن با execCommand)
+        document.getElementById('btn-copy-exam-code').addEventListener('click', () => {
+          const ta = document.getElementById('report-code-output');
+          ta.focus();
+          ta.select();
+          ta.setSelectionRange(0, 99999);
+          let ok = false;
+          try { ok = document.execCommand('copy'); } catch (e) {}
+          if (ok) {
+            SFX.coin();
+            showToast('✅ کد کارنامه کپی شد! حالا برای معلم بفرست.');
+          } else {
+            showToast('لطفاً کد داخل کادر را انتخاب و کپی کن.');
+          }
+        });
+        document.getElementById('btn-exam-retake').addEventListener('click', () => { SFX.click(); startOfficialExam(); });
+        document.getElementById('btn-exam-home').addEventListener('click', () => { SFX.click(); showView('home'); });
+
+        // پشتیبانی کیبورد فیزیکی
+        window.addEventListener('keydown', (e) => {
+          const tag = document.activeElement && document.activeElement.tagName;
+          if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+          if (currentView === 'battle' && battle && !battle.locked) {
+            if (e.key >= '0' && e.key <= '9' && battle.input.length < 3) {
+              SFX.click(); battle.input += e.key; updateBattleAnswerBox();
+            } else if (e.key === 'Backspace') {
+              e.preventDefault(); battle.input = battle.input.slice(0, -1); updateBattleAnswerBox();
+            } else if (e.key === 'Enter') {
+              e.preventDefault(); submitBattleAnswer();
+            }
+          } else if (currentView === 'exam' && exam) {
+            if (e.key >= '0' && e.key <= '9' && exam.input.length < 3) {
+              SFX.click(); exam.input += e.key;
+              document.getElementById('exam-answer-box').textContent = toFa(exam.input);
+            } else if (e.key === 'Backspace') {
+              e.preventDefault(); exam.input = exam.input.slice(0, -1);
+              document.getElementById('exam-answer-box').textContent = exam.input ? toFa(exam.input) : '؟';
+            } else if (e.key === 'Enter') {
+              e.preventDefault(); submitExamAnswer();
+            }
+          }
+        });
+
+        window.addEventListener('resize', () => {
+          initStars();
+          resizeConfetti();
+          resizeFxCanvas();
+        });
+      }
+
+      /* =====================================================================
+         15. شروع برنامه
+         ===================================================================== */
+      window.addEventListener('DOMContentLoaded', () => {
+        loadState();
+        initStars();
+        resizeConfetti();
+        animateBg();
+        animateConfetti();
+        animateFx();
+        bindEvents();
+        updateMuteUI();
+
+        if (state.name) showView('home');
+        else showView('login');
+      });
+    })();
+  </script>
+</body>
+</html>
