@@ -1,20 +1,20 @@
 {
-  "name": "فرمانده اعداد: کهکشان ضرب و تقسیم",
-  "short_name": "فرمانده اعداد",
-  "description": "بازی آموزشی ضرب و تقسیم پایه چهارم",
+  "name": "ریاضی چهارم | مدرسه آزادگان",
+  "short_name": "ریاضی چهارم",
+  "description": "اپلیکیشن جامع بازی و تمرین ریاضی پایه چهارم",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0b1026",
-  "theme_color": "#0b1026",
+  "background_color": "#eff6ff",
+  "theme_color": "#2563eb",
   "dir": "rtl",
   "lang": "fa",
   "icons": [
     {
-      "src": "./icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "./icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]
