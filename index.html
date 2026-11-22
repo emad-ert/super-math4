@@ -329,10 +329,16 @@
 
       const AVATARS = [
         { id: 'astronaut', name: 'فضانورد', emoji: '👨‍🚀', price: 0, bg: 'bg-sky-50 border-sky-200' },
-        { id: 'hero', name: 'ابرقهرمان', emoji: '🦸‍♂️', price: 45, bg: 'bg-rose-50 border-rose-200' },
-        { id: 'robot', name: 'ربات هوشمند', emoji: '🤖', price: 75, bg: 'bg-indigo-50 border-indigo-200' },
-        { id: 'lion', name: 'شیر شجاع', emoji: '🦁', price: 110, bg: 'bg-amber-50 border-amber-200' },
-        { id: 'dragon', name: 'اژدهای کیهانی', emoji: '🐉', price: 150, bg: 'bg-emerald-50 border-emerald-200' }
+        { id: 'hero', name: 'ابرقهرمان', emoji: '🦸‍♂️', price: 120, bg: 'bg-rose-50 border-rose-200' },
+        { id: 'robot', name: 'ربات هوشمند', emoji: '🤖', price: 200, bg: 'bg-indigo-50 border-indigo-200' },
+        { id: 'lion', name: 'شیر شجاع', emoji: '🦁', price: 320, bg: 'bg-amber-50 border-amber-200' },
+        { id: 'dragon', name: 'اژدهای کیهانی', emoji: '🐉', price: 450, bg: 'bg-emerald-50 border-emerald-200' },
+        { id: 'ninja', name: 'نینجای اعداد', emoji: '🥷', price: 650, limited: true, bg: 'bg-slate-100 border-slate-300' },
+        { id: 'wizard', name: 'جادوگر ریاضی', emoji: '🧙‍♂️', price: 900, limited: true, bg: 'bg-purple-50 border-purple-200' },
+        { id: 'cyber_king', name: 'پادشاه کهکشان', emoji: '👑', price: 1250, limited: true, bg: 'bg-yellow-50 border-yellow-300' },
+        { id: 'fraction_chef', name: 'سرآشپز کسرها', emoji: '👨‍🍳', price: 0, locked: true, unlockHint: 'فصل کسرها 🔒', bg: 'bg-slate-100 border-slate-200' },
+        { id: 'geo_architect', name: 'معمار هندسه', emoji: '👷‍♂️', price: 0, locked: true, unlockHint: 'فصل هندسه 🔒', bg: 'bg-slate-100 border-slate-200' },
+        { id: 'grand_champion', name: 'قهرمان سال چهارم', emoji: '🏆', price: 0, locked: true, unlockHint: 'چالش پایان سال 🔒', bg: 'bg-slate-100 border-slate-200' }
       ];
 
       const toFa = (v) => String(v).replace(/\d/g, (d) => FA[Number(d)]);
@@ -401,7 +407,7 @@
 
         document.getElementById('stat-stages').textContent = `${toFa(p.completedStages.length)} از ۱۰`;
 
-        const canBuyAvatar = AVATARS.some((a) => a.price > 0 && !p.ownedAvatars.includes(a.id) && p.coins >= a.price);
+        const canBuyAvatar = AVATARS.some((a) => !a.locked && a.price > 0 && !p.ownedAvatars.includes(a.id) && p.coins >= a.price);
         document.getElementById('lobby-shop-badge').classList.toggle('hidden', !canBuyAvatar);
 
         const weak = [], strong = [];
@@ -439,20 +445,30 @@
         grid.innerHTML = '';
 
         AVATARS.forEach((av) => {
-          const owned = av.price === 0 || p.ownedAvatars.includes(av.id);
-          const equipped = p.equippedAvatar === av.id;
+          const isLocked = !!av.locked;
+          const owned = !isLocked && (av.price === 0 || p.ownedAvatars.includes(av.id));
+          const equipped = !isLocked && p.equippedAvatar === av.id;
+
+          const badgeHtml = isLocked
+            ? '<span class="absolute top-2 right-2 px-1.5 py-0.5 rounded-md bg-slate-200 text-slate-600 text-[10px] font-black">🔒 قفل</span>'
+            : av.limited
+            ? '<span class="absolute top-2 right-2 px-1.5 py-0.5 rounded-md bg-amber-100 border border-amber-300 text-amber-800 text-[10px] font-black">✨ ویژه</span>'
+            : '';
 
           const card = document.createElement('div');
-          card.className = `rounded-2xl p-3 text-center flex flex-col justify-between gap-2 border-2 ${
-            equipped ? 'bg-blue-50 border-blue-500' : 'bg-slate-50 border-slate-200'
+          card.className = `relative rounded-2xl p-3 text-center flex flex-col justify-between gap-2 border-2 ${
+            equipped ? 'bg-blue-50 border-blue-500' : av.limited ? 'bg-amber-50/40 border-amber-300' : isLocked ? 'bg-slate-100/70 border-slate-200 opacity-80' : 'bg-slate-50 border-slate-200'
           }`;
           card.innerHTML = `
+            ${badgeHtml}
             <div>
-              <div class="w-16 h-16 mx-auto rounded-2xl border ${av.bg} flex items-center justify-center text-4xl">${av.emoji}</div>
-              <div class="text-sm font-black text-slate-900 mt-1.5">${av.name}</div>
+              <div class="w-16 h-16 mx-auto rounded-2xl border ${av.bg} flex items-center justify-center text-4xl ${isLocked ? 'grayscale opacity-60' : ''}">${av.emoji}</div>
+              <div class="text-sm font-black ${isLocked ? 'text-slate-500' : 'text-slate-900'} mt-1.5">${av.name}</div>
             </div>
-            <button type="button" class="block-btn w-full py-2 rounded-xl text-xs font-black ${
-              equipped
+            <button type="button" class="block-btn w-full py-2 rounded-xl text-[11px] font-black ${
+              isLocked
+                ? 'bg-slate-200 text-slate-500'
+                : equipped
                 ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                 : owned
                 ? 'bg-blue-600 text-white'
@@ -460,11 +476,15 @@
                 ? 'bg-amber-400 text-slate-950'
                 : 'bg-slate-200 text-slate-500'
             }">
-              ${equipped ? 'فعال است ✅' : owned ? 'انتخاب کن' : `خرید (${toFa(av.price)} 🪙)`}
+              ${isLocked ? (av.unlockHint || 'به‌زودی 🔒') : equipped ? 'فعال است ✅' : owned ? 'انتخاب کن' : `خرید (${toFa(av.price)} 🪙)`}
             </button>
           `;
 
           card.querySelector('button').addEventListener('click', () => {
+            if (isLocked) {
+              showToast(`این آواتار در «${av.unlockHint || 'بازی‌های بعدی'}» باز میشه! 🔒`);
+              return;
+            }
             if (equipped) return;
             if (owned) {
               p.equippedAvatar = av.id;
