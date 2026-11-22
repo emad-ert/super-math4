@@ -1028,6 +1028,7 @@
           کارنامه رسمی ارزیابی پایه چهارم
         </div>
         <h2 id="report-student-title" class="text-xl font-black text-slate-900">کارنامه دانش‌آموز</h2>
+        <div id="report-datetime" class="text-xs font-bold text-slate-500 mt-1" dir="ltr"></div>
         <div class="grid grid-cols-3 gap-2 mt-4">
           <div class="p-3 rounded-2xl bg-emerald-50 border border-emerald-200">
             <div class="text-[11px] font-bold text-emerald-700">نمره از ۲۰</div>
@@ -1151,8 +1152,16 @@
         return arr;
       }
 
-      function todayISO() {
-        return new Date().toISOString().slice(0, 10);
+      function nowDateTimeStr() {
+        const now = new Date();
+        try {
+          const d = new Intl.DateTimeFormat('fa-IR-u-nu-latn', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+          const t = new Intl.DateTimeFormat('fa-IR-u-nu-latn', { hour: '2-digit', minute: '2-digit', hour12: false }).format(now);
+          return `${d} - ${t}`;
+        } catch (e) {
+          const pad = (n) => String(n).padStart(2, '0');
+          return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        }
       }
 
       let toastTimer = null;
@@ -1268,10 +1277,16 @@
 
       const AVATARS = [
         { id: 'astronaut', name: 'فضانورد', emoji: '👨‍🚀', price: 0, bg: 'from-sky-500/30 to-blue-900/80' },
-        { id: 'hero', name: 'ابرقهرمان', emoji: '🦸‍♂️', price: 45, bg: 'from-rose-500/30 to-red-900/80' },
-        { id: 'robot', name: 'ربات هوشمند', emoji: '🤖', price: 75, bg: 'from-indigo-500/30 to-slate-900/80' },
-        { id: 'lion', name: 'شیر شجاع', emoji: '🦁', price: 110, bg: 'from-amber-500/30 to-orange-900/80' },
-        { id: 'dragon', name: 'اژدهای کیهانی', emoji: '🐉', price: 150, bg: 'from-emerald-500/30 to-teal-900/80' }
+        { id: 'hero', name: 'ابرقهرمان', emoji: '🦸‍♂️', price: 120, bg: 'from-rose-500/30 to-red-900/80' },
+        { id: 'robot', name: 'ربات هوشمند', emoji: '🤖', price: 200, bg: 'from-indigo-500/30 to-slate-900/80' },
+        { id: 'lion', name: 'شیر شجاع', emoji: '🦁', price: 320, bg: 'from-amber-500/30 to-orange-900/80' },
+        { id: 'dragon', name: 'اژدهای کیهانی', emoji: '🐉', price: 450, bg: 'from-emerald-500/30 to-teal-900/80' },
+        { id: 'ninja', name: 'نینجای اعداد', emoji: '🥷', price: 650, limited: true, bg: 'from-slate-600/40 to-slate-950/90' },
+        { id: 'wizard', name: 'جادوگر ریاضی', emoji: '🧙‍♂️', price: 900, limited: true, bg: 'from-purple-500/35 to-indigo-950/90' },
+        { id: 'cyber_king', name: 'پادشاه کهکشان', emoji: '👑', price: 1250, limited: true, bg: 'from-yellow-400/35 to-amber-900/90' },
+        { id: 'fraction_chef', name: 'سرآشپز کسرها', emoji: '👨‍🍳', price: 0, locked: true, unlockHint: 'فصل کسرها 🔒', bg: 'from-slate-800/60 to-slate-950/90' },
+        { id: 'geo_architect', name: 'معمار هندسه', emoji: '👷‍♂️', price: 0, locked: true, unlockHint: 'فصل هندسه 🔒', bg: 'from-slate-800/60 to-slate-950/90' },
+        { id: 'grand_champion', name: 'قهرمان سال چهارم', emoji: '🏆', price: 0, locked: true, unlockHint: 'چالش پایان سال 🔒', bg: 'from-slate-800/60 to-slate-950/90' }
       ];
 
       /* =====================================================================
@@ -1316,17 +1331,17 @@
       }
 
       const STORY_STAGES = [
-        { id: 1, bossEmoji: '🛸', bossName: 'پهپاد نگهبان', topic: 'ضرب ۲، ۵ و ۱۰', bossSvg: 'drone', maxHp: 50, rewardCoins: 30, buildDeck: () => buildMulDeck([2, 5, 10], 2, 10) },
-        { id: 2, bossEmoji: '❄️', bossName: 'ربات یخ‌شکن', topic: 'ضرب ۳ و ۴', bossSvg: 'icebot', maxHp: 50, rewardCoins: 35, buildDeck: () => buildMulDeck([3, 4], 2, 10) },
-        { id: 3, bossEmoji: '🔴', bossName: 'نگهبان سرخ', topic: 'تقسیم ۲، ۳ و ۵', bossSvg: 'mars', maxHp: 50, rewardCoins: 35, buildDeck: () => buildDivDeck([2, 3, 5], 2, 10) },
-        { id: 4, bossEmoji: '⚡', bossName: 'شکارچی انرژی', topic: 'ضرب ۶ و ۷', bossSvg: 'hunter', maxHp: 60, rewardCoins: 40, buildDeck: () => buildMulDeck([6, 7], 2, 10) },
-        { id: 5, bossEmoji: '🌋', bossName: 'تایتان گدازه', topic: 'تقسیم ۴، ۶ و ۷', bossSvg: 'lava', maxHp: 60, rewardCoins: 45, buildDeck: () => buildDivDeck([4, 6, 7], 2, 10) },
-        { id: 6, bossEmoji: '👾', bossName: 'ناوشکن سایه', topic: 'ضرب ۸ و ۹', bossSvg: 'shadow', maxHp: 60, rewardCoins: 45, buildDeck: () => buildMulDeck([8, 9], 2, 10) },
-        { id: 7, bossEmoji: '🐉', bossName: 'اژدهای لیزری', topic: 'تقسیم ۸ و ۹', bossSvg: 'dragon', maxHp: 70, rewardCoins: 50, buildDeck: () => buildDivDeck([8, 9], 2, 10) },
-        { id: 8, bossEmoji: '🌌', bossName: 'هیولای کیهانی', topic: 'ضرب ۳ تا ۹', bossSvg: 'cosmic', maxHp: 70, rewardCoins: 50, buildDeck: () => buildMulDeck([3, 4, 5, 6, 7, 8, 9], 3, 9) },
-        { id: 9, bossEmoji: '🏰', bossName: 'دژ پولادین', topic: 'تقسیم ۳ تا ۹', bossSvg: 'fortress', maxHp: 70, rewardCoins: 55, buildDeck: () => buildDivDeck([3, 4, 5, 6, 7, 8, 9], 3, 9) },
+        { id: 1, bossEmoji: '🛸', bossName: 'پهپاد نگهبان', topic: 'ضرب ۲، ۵ و ۱۰', bossSvg: 'drone', maxHp: 50, rewardCoins: 10, buildDeck: () => buildMulDeck([2, 5, 10], 2, 10) },
+        { id: 2, bossEmoji: '❄️', bossName: 'ربات یخ‌شکن', topic: 'ضرب ۳ و ۴', bossSvg: 'icebot', maxHp: 50, rewardCoins: 12, buildDeck: () => buildMulDeck([3, 4], 2, 10) },
+        { id: 3, bossEmoji: '🔴', bossName: 'نگهبان سرخ', topic: 'تقسیم ۲، ۳ و ۵', bossSvg: 'mars', maxHp: 50, rewardCoins: 12, buildDeck: () => buildDivDeck([2, 3, 5], 2, 10) },
+        { id: 4, bossEmoji: '⚡', bossName: 'شکارچی انرژی', topic: 'ضرب ۶ و ۷', bossSvg: 'hunter', maxHp: 60, rewardCoins: 15, buildDeck: () => buildMulDeck([6, 7], 2, 10) },
+        { id: 5, bossEmoji: '🌋', bossName: 'تایتان گدازه', topic: 'تقسیم ۴، ۶ و ۷', bossSvg: 'lava', maxHp: 60, rewardCoins: 18, buildDeck: () => buildDivDeck([4, 6, 7], 2, 10) },
+        { id: 6, bossEmoji: '👾', bossName: 'ناوشکن سایه', topic: 'ضرب ۸ و ۹', bossSvg: 'shadow', maxHp: 60, rewardCoins: 18, buildDeck: () => buildMulDeck([8, 9], 2, 10) },
+        { id: 7, bossEmoji: '🐉', bossName: 'اژدهای لیزری', topic: 'تقسیم ۸ و ۹', bossSvg: 'dragon', maxHp: 70, rewardCoins: 20, buildDeck: () => buildDivDeck([8, 9], 2, 10) },
+        { id: 8, bossEmoji: '🌌', bossName: 'هیولای کیهانی', topic: 'ضرب ۳ تا ۹', bossSvg: 'cosmic', maxHp: 70, rewardCoins: 20, buildDeck: () => buildMulDeck([3, 4, 5, 6, 7, 8, 9], 3, 9) },
+        { id: 9, bossEmoji: '🏰', bossName: 'دژ پولادین', topic: 'تقسیم ۳ تا ۹', bossSvg: 'fortress', maxHp: 70, rewardCoins: 25, buildDeck: () => buildDivDeck([3, 4, 5, 6, 7, 8, 9], 3, 9) },
         {
-          id: 10, bossEmoji: '👑', bossName: 'فرمانروای تاریکی', topic: 'نبرد نهایی', bossSvg: 'darklord', maxHp: 80, rewardCoins: 65, isFinal: true,
+          id: 10, bossEmoji: '👑', bossName: 'فرمانروای تاریکی', topic: 'نبرد نهایی', bossSvg: 'darklord', maxHp: 80, rewardCoins: 35, isFinal: true,
           buildDeck: () => [...buildMulDeck([4, 5, 6, 7, 8, 9], 3, 9), ...buildDivDeck([4, 5, 6, 7, 8, 9], 3, 9)]
         }
       ];
@@ -1478,7 +1493,7 @@
       function canAffordAnyUnownedItem() {
         const shipAvail = SHIPS.some((s) => s.price > 0 && !state.ownedShips.includes(s.id) && state.coins >= s.price);
         const laserAvail = LASERS.some((l) => l.price > 0 && !state.ownedLasers.includes(l.id) && state.coins >= l.price);
-        const avAvail = AVATARS.some((a) => a.price > 0 && !state.ownedAvatars.includes(a.id) && state.coins >= a.price);
+        const avAvail = AVATARS.some((a) => !a.locked && a.price > 0 && !state.ownedAvatars.includes(a.id) && state.coins >= a.price);
         return shipAvail || laserAvail || avAvail;
       }
 
@@ -1863,7 +1878,7 @@
         document.getElementById('login-ship-preview').innerHTML = getShipObj(state.equippedShip).svg;
         const picker = document.getElementById('login-avatar-picker');
         picker.innerHTML = '';
-        AVATARS.forEach((av) => {
+        AVATARS.slice(0, 5).forEach((av) => {
           const unlocked = av.price === 0 || state.ownedAvatars.includes(av.id);
           const selected = state.equippedAvatar === av.id;
           const btn = document.createElement('button');
@@ -2090,29 +2105,39 @@
         const equippedId = activeShopTab === 'ships' ? state.equippedShip : activeShopTab === 'lasers' ? state.equippedLaser : state.equippedAvatar;
 
         list.forEach((item) => {
-          const owned = item.price === 0 || ownedArr.includes(item.id);
-          const equipped = equippedId === item.id;
+          const isLocked = !!item.locked;
+          const owned = !isLocked && (item.price === 0 || ownedArr.includes(item.id));
+          const equipped = !isLocked && equippedId === item.id;
 
           let previewHtml = '';
           if (activeShopTab === 'lasers') {
             previewHtml = `<div class="h-14 flex items-center justify-center"><div class="w-24 h-3 rounded-full" style="background: ${item.color}; box-shadow: 0 0 16px ${item.color};"></div></div>`;
           } else if (activeShopTab === 'avatars') {
-            previewHtml = `<div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br ${item.bg} border border-white/20 flex items-center justify-center text-3xl">${item.emoji}</div>`;
+            previewHtml = `<div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br ${item.bg} border border-white/20 flex items-center justify-center text-3xl ${isLocked ? 'grayscale opacity-60' : ''}">${item.emoji}</div>`;
           } else {
             previewHtml = `<div class="w-16 h-16 mx-auto">${item.svg}</div>`;
           }
 
+          const badgeHtml = isLocked
+            ? '<span class="absolute top-2 right-2 px-1.5 py-0.5 rounded-md bg-slate-800 border border-slate-600 text-[9px] font-black text-slate-300">🔒 قفل</span>'
+            : item.limited
+            ? '<span class="absolute top-2 right-2 px-1.5 py-0.5 rounded-md bg-amber-500/25 border border-amber-400/70 text-[9px] font-black text-amber-300">✨ ویژه</span>'
+            : '';
+
           const card = document.createElement('div');
-          card.className = `rounded-2xl p-3 text-center flex flex-col justify-between gap-2 border ${
-            equipped ? 'bg-cyan-950/50 border-cyan-400' : 'bg-slate-900/90 border-slate-700'
+          card.className = `relative rounded-2xl p-3 text-center flex flex-col justify-between gap-2 border ${
+            equipped ? 'bg-cyan-950/50 border-cyan-400' : item.limited ? 'bg-slate-900/95 border-amber-400/50' : isLocked ? 'bg-slate-950/80 border-slate-800 opacity-80' : 'bg-slate-900/90 border-slate-700'
           }`;
           card.innerHTML = `
+            ${badgeHtml}
             <div>
               ${previewHtml}
-              <div class="text-xs font-black text-white mt-1.5">${item.name}</div>
+              <div class="text-xs font-black ${isLocked ? 'text-slate-400' : 'text-white'} mt-1.5">${item.name}</div>
             </div>
-            <button class="game-btn w-full py-2 rounded-xl text-xs font-black ${
-              equipped
+            <button class="game-btn w-full py-2 rounded-xl text-[11px] font-black ${
+              isLocked
+                ? 'bg-slate-900 text-slate-400 border border-slate-700'
+                : equipped
                 ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-400/50'
                 : owned
                 ? 'bg-cyan-600 text-white'
@@ -2120,11 +2145,16 @@
                 ? 'bg-gradient-to-l from-amber-400 to-orange-500 text-slate-950'
                 : 'bg-slate-800 text-slate-400'
             }">
-              ${equipped ? 'فعال است ✅' : owned ? 'انتخاب کن' : `خرید (${toFa(item.price)} 🪙)`}
+              ${isLocked ? (item.unlockHint || 'به‌زودی 🔒') : equipped ? 'فعال است ✅' : owned ? 'انتخاب کن' : `خرید (${toFa(item.price)} 🪙)`}
             </button>
           `;
 
           card.querySelector('button').addEventListener('click', () => {
+            if (isLocked) {
+              SFX.shieldHit();
+              showToast(`این آواتار در «${item.unlockHint || 'بازی‌های بعدی'}» باز میشه! 🔒`);
+              return;
+            }
             if (equipped) return;
             if (owned) {
               SFX.click();
@@ -2384,7 +2414,9 @@
 
           const dmg = isFast ? (battle.combo >= 2 ? 20 : 15) : 10;
           const coinMult = (battle.mode === 'story' && battle.phase2Triggered) ? 2 : 1;
-          const baseCoin = isFast ? (battle.combo >= 2 ? 12 : 9) : 6;
+          const baseCoin = battle.mode === 'gym'
+            ? (isFast ? 2 : 1)
+            : (isFast ? (battle.combo >= 2 ? 4 : 3) : 2);
           const coinGain = baseCoin * coinMult;
           const xpGain = isFast ? 15 : 10;
 
@@ -2464,9 +2496,10 @@
         let bonusCoins = 0;
         let bonusXp = 0;
         if (battle.mode === 'story' && won) {
-          bonusCoins = battle.stage.rewardCoins;
-          bonusXp = 35;
-          if (!state.completedStages.includes(battle.stage.id)) {
+          const isFirstClear = !state.completedStages.includes(battle.stage.id);
+          bonusCoins = isFirstClear ? battle.stage.rewardCoins : 5;
+          bonusXp = isFirstClear ? 35 : 15;
+          if (isFirstClear) {
             state.completedStages.push(battle.stage.id);
           }
         }
@@ -2812,7 +2845,9 @@
         const pct = Math.round((exam.correct / 15) * 100);
         const score20 = Math.round((exam.correct / 15) * 20 * 10) / 10;
 
+        const examDateTime = nowDateTimeStr();
         document.getElementById('report-student-title').textContent = `کارنامه ${state.name || 'دانش‌آموز'}`;
+        document.getElementById('report-datetime').textContent = `📅 ${toFa(examDateTime)}`;
         document.getElementById('report-score').textContent = toFa(score20);
         document.getElementById('report-percent').textContent = `${toFa(pct)}٪`;
         document.getElementById('report-time').textContent = `${toFa(totalSeconds)} ث`;
@@ -2834,7 +2869,7 @@
           tot: 15,
           pct,
           sec: totalSeconds,
-          dt: todayISO(),
+          dt: examDateTime,
           wr: exam.wr,
           sl: exam.sl
         };
